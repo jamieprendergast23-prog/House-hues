@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { today } from '../lib/format'
+import { isDemo } from '../lib/supabase'
+import { demoBookingRequest } from '../lib/demo'
 
 const SERVICES = [
   ['staging', 'Property staging', 'Furnish and style a property for sale or lease'],
@@ -20,6 +22,7 @@ export default function Book() {
     e.preventDefault()
     setState('sending'); setErr('')
     try {
+      if (isDemo) { await demoBookingRequest(f); setState('done'); return }
       const res = await fetch('/.netlify/functions/booking-request', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(f),
       })

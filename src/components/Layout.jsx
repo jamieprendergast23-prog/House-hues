@@ -34,7 +34,7 @@ export default function Layout({ children }) {
           <NavLink to="/team">Team</NavLink>
         </nav>
         <div className="topbar-actions">
-          <button className="btn btn-small" onClick={() => { setFieldMode(true); nav('/') }}>Field mode</button>
+          <button className="btn btn-small" onClick={() => { nav('/'); setTimeout(() => setFieldMode(true), 50) }}>Field mode</button>
           <button className="btn btn-small btn-ghost" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </div>
       </header>

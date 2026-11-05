@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, isDemo } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 
 export default function Login() {
@@ -34,6 +34,7 @@ export default function Login() {
       <form className="card login" onSubmit={submit}>
         <h1 className="brand brand-lg">House & Hues</h1>
         <p className="muted">Inventory & bookings</p>
+        {isDemo && <p className="note small">Demo: any email and password works. Put “crew” in the email to see what crew see.</p>}
         <input type="email" required placeholder="Email" value={email}
           onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
         {mode === 'password' && (

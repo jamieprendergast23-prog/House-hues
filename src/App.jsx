@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { configured } from './lib/supabase'
+import { configured, isDemo } from './lib/supabase'
 import { AuthProvider, useAuth } from './lib/auth'
 import { Toaster } from './lib/toast'
 import { Loading } from './components/ui'
@@ -28,6 +28,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Toaster />
+      {isDemo && <div className="demo-bar">Demo with sample data. Changes reset on refresh.</div>}
       <Routes>
         <Route path="/book" element={<Book />} />
         <Route path="/login" element={<Login />} />
@@ -70,6 +71,7 @@ function Protected() {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/requests" element={<Requests />} />
         <Route path="/team" element={<Team />} />
+        <Route path="/pick/:jobId" element={<PickList />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

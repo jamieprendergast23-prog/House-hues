@@ -4,7 +4,6 @@ import { supabase, friendlyError } from '../lib/supabase'
 import { PIPELINES, ROOMS, TYPE_LABEL } from '../lib/constants'
 import { fmtDate, fmtLong, hireEnd, money, addDays } from '../lib/format'
 import { toast } from '../lib/toast'
-import { useAuth } from '../lib/auth'
 import { Field, Modal, Thumb, Loading, TypeTag, JobPill, Empty } from '../components/ui'
 import Scanner from '../components/Scanner'
 
@@ -29,7 +28,6 @@ export default function JobDetail() {
   const isNew = id === 'new'
   const nav = useNavigate()
   const loc = useLocation()
-  const { setFieldMode } = useAuth()
 
   const [job, setJob] = useState(isNew ? { ...BLANK_JOB, ...(loc.state?.prefill || {}) } : null)
   const [saved, setSaved] = useState(null)       // last saved copy, to detect date changes
@@ -266,7 +264,7 @@ export default function JobDetail() {
           ) : (
             <div className="row">
               <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>+ Add furniture</button>
-              <button type="button" className="btn" onClick={() => { setFieldMode(true); nav(`/pick/${id}`) }}>Open pick list</button>
+              <button type="button" className="btn" onClick={() => nav(`/pick/${id}`)}>Open pick list</button>
             </div>
           )}
           {Object.keys(byRoom).length === 0 ? <Empty>Nothing added yet.</Empty> : Object.entries(byRoom).map(([room, ls]) => (

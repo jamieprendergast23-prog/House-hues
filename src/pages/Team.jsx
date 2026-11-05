@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, isDemo } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { toast } from '../lib/toast'
 import { Field, Loading } from '../components/ui'
@@ -22,6 +22,7 @@ export default function Team() {
 
   const invite = async (e) => {
     e.preventDefault()
+    if (isDemo) return toast('Invites send real emails once it’s live')
     setBusy(true)
     const res = await fetch('/.netlify/functions/invite-user', {
       method: 'POST',

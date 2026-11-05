@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, isDemo } from '../lib/supabase'
 import { fmtDate } from '../lib/format'
 import { toast } from '../lib/toast'
 import { TypeTag, Loading, Empty } from '../components/ui'
@@ -46,7 +46,7 @@ export default function Requests() {
     toast('Marked declined')
   }
 
-  const bookUrl = `${window.location.origin}/book`
+  const bookUrl = isDemo ? `${window.location.href.split('#')[0]}#/book` : `${window.location.origin}/book`
 
   return (
     <div className="stack">

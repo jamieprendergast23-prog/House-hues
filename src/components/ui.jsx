@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { ITEM_STATUS, CONDITIONS, statusLabel, TYPE_LABEL } from '../lib/constants'
 
-export const itemUrl = (code) => `${window.location.origin}/i/${code}`
+export const itemUrl = (code) => import.meta.env.VITE_DEMO === '1'
+  ? `${window.location.href.split('#')[0]}#/i/${code}`
+  : `${window.location.origin}/i/${code}`
 
 export function QrImg({ code, size = 160 }) {
   const [src, setSrc] = useState('')
