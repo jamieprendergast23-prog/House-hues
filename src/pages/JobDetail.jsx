@@ -1,0 +1,435 @@
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
+import { supabase, friendlyError } from '../lib/supabase'
+import { PIPELINES, ROOMS, TYPE_LABEL } from '../lib/constants'
+import { fmtDate, fmtLong, hireEnd, money, addDays } from '../lib/format'
+import { toast } from '../lib/toast'
+import { useAuth } from '../lib/auth'
+import { Field, Modal, Thumb, Loading, TypeTag, JobPill, Empty } from '../components/ui'
+import Scanner from '../components/Scanner'
+
+const BLANK_JOB = {
+  type: 'staging', status: 'enquiry', property_address: '', suburb: '', access_notes: '', notes: '',
+  client_id: null, site_visit_date: null, consult_date: null, pack_date: null, install_date: null,
+  hire_weeks: 6, collection_date: null, unpack_date: null,
+}
+
+// Mirror of jobs.hold_period in the database
+function holdRange(j) {
+  const start = j.pack_date || j.install_date
+  if (!start) return null
+  let end = j.unpack_date || j.collection_date ||
+    (j.install_date ? addDays(j.install_date, j.hire_weeks * 7) : addDays(j.pack_date, j.hire_weeks * 7))
+  if (end < start) end = start
+  return `[${start},${end}]`
+}
+
+export default function JobDetail() {
+  const { id } = useParams()
+  const isNew = id === 'new'
+  const nav = useNavigate()
+  const loc = useLocation()
+  const { setFieldMode } = useAuth()
+
+  const [job, setJob] = useState(isNew ? { ...BLANK_JOB, ...(loc.state?.prefill || {}) } : null)
+  const [saved, setSaved] = useState(null)       // last saved copy, to detect date changes
+  const [fin, setFin] = useState({})
+  const [clients, setClients] = useState([])
+  const [newClient, setNewClient] = useState(isNew ? loc.state?.newClient || null : null)
+  const [lines, setLines] = useState([])
+  const [busy, setBusy] = useState(false)
+  const [conflicts, setConflicts] = useState(null)
+  const [adding, setAdding] = useState(false)
+
+  const loadLines = useCallback(async () => {
+    if (isNew) return
+    const { data } = await supabase.from('job_items')
+      .select('id, room, packed_at, returned_at, items(id, code, name, category, photo_url, shed_location)')
+      .eq('job_id', id).order('room')
+    setLines(data || [])
+  }, [id, isNew])
+
+  useEffect(() => {
+    supabase.from('clients').select('id, name, agency, email, phone').order('name').then(({ data }) => setClients(data || []))
+    if (isNew) return
+    supabase.from('jobs').select('*').eq('id', id).single().then(({ data }) => { setJob(data); setSaved(data) })
+    supabase.from('job_finance').select('*').eq('job_id', id).maybeSingle().then(({ data }) => setFin(data || {}))
+    loadLines()
+  }, [id, isNew, loadLines])
+
+  const client = useMemo(() => clients.find((c) => c.id === job?.client_id), [clients, job?.client_id])
+
+  if (!job) return <Loading />
+
+  const set = (k) => (e) => setJob({ ...job, [k]: e.target.value === '' ? null : e.target.value })
+  const setF = (k) => (e) => setFin({ ...fin, [k]: e.target.value === '' ? null : e.target.value })
+  const pipeline = PIPELINES[job.type]
+
+  const save = async (e) => {
+    e?.preventDefault()
+    setBusy(true)
+    try {
+      // 1. check that moving dates won't double-book anything already on this job
+      if (!isNew && lines.length) {
+        const range = holdRange(job)
+        if (range && range !== holdRange(saved)) {
+          const { data: c } = await supabase.rpc('job_date_conflicts', { p_job_id: id, p_range: range })
+          if (c?.length) { setConflicts(c); setBusy(false); return }
+        }
+      }
+      // 2. client
+      let client_id = job.client_id
+      if (newClient?.name) {
+        const { data, error } = await supabase.from('clients').insert(newClient).select().single()
+        if (error) throw error
+        client_id = data.id
+        setClients([...clients, data]); setNewClient(null)
+      }
+      const { id: _id, job_number: _n, hold_period: _h, created_at: _c, updated_at: _u, ...fields } = job
+      const row = { ...fields, client_id, hire_weeks: Number(job.hire_weeks) || 6 }
+      // 3. job
+      let jobId = id
+      if (isNew) {
+        const { data, error } = await supabase.from('jobs').insert(row).select().single()
+        if (error) throw error
+        jobId = data.id
+        if (loc.state?.requestId) {
+          await supabase.from('booking_requests').update({ status: 'converted', job_id: jobId }).eq('id', loc.state.requestId)
+        }
+      } else {
+        const { data, error } = await supabase.from('jobs').update(row).eq('id', id).select().single()
+        if (error) throw error
+        setJob(data); setSaved(data)
+      }
+      // 4. money
+      const { job_id: _j, ...f } = fin
+      if (Object.values(f).some((v) => v !== null && v !== undefined && v !== '')) {
+        await supabase.from('job_finance').upsert({ job_id: jobId, ...f })
+      }
+      toast('Saved')
+      if (isNew) nav(`/jobs/${jobId}`, { replace: true })
+    } catch (err) { toast(friendlyError(err), 'error') }
+    setBusy(false)
+  }
+
+  const setStatus = async (status) => {
+    if (isNew) { setJob({ ...job, status }); return }
+    if (status === 'cancelled' && !confirm('Cancel this job? Items not yet packed will be released.')) return
+    const { data, error } = await supabase.from('jobs').update({ status }).eq('id', id).select().single()
+    if (error) return toast(friendlyError(error), 'error')
+    setJob({ ...job, status: data.status }); toast(`Marked ${status.replace('_', ' ')}`)
+    if (status === 'cancelled') loadLines()
+  }
+
+  const removeLine = async (lineId) => {
+    const { error } = await supabase.from('job_items').delete().eq('id', lineId)
+    if (error) return toast(friendlyError(error), 'error')
+    setLines(lines.filter((l) => l.id !== lineId))
+  }
+
+  const deleteJob = async () => {
+    if (lines.some((l) => l.packed_at && !l.returned_at)) return toast('Items are still out on this job. Return them first.', 'error')
+    if (!confirm('Delete this job completely?')) return
+    await supabase.from('job_items').delete().eq('job_id', id)
+    const { error } = await supabase.from('jobs').delete().eq('id', id)
+    if (error) return toast(friendlyError(error), 'error')
+    nav('/jobs', { replace: true })
+  }
+
+  const end = hireEnd(job)
+  const balance = fin.quote_amount ? Number(fin.quote_amount) - (fin.paid_in_full_on ? Number(fin.quote_amount) : fin.deposit_paid_on ? Number(fin.deposit_amount || 0) : 0) : null
+  const byRoom = lines.reduce((acc, l) => ((acc[l.room] ||= []).push(l), acc), {})
+  const packedCount = lines.filter((l) => l.packed_at).length
+
+  return (
+    <div className="stack">
+    <form onSubmit={save} className="stack">
+      <div className="page-head">
+        <div>
+          <h1>{isNew ? 'New job' : job.property_address}</h1>
+          {!isNew && <div className="row-pills"><span className="muted">#{job.job_number}</span><TypeTag type={job.type} /><JobPill job={job} /></div>}
+        </div>
+      </div>
+
+      {/* pipeline */}
+      <div className="stepper">
+        {pipeline.map(([k, l], i) => {
+          const idx = pipeline.findIndex(([s]) => s === job.status)
+          return (
+            <button type="button" key={k} onClick={() => setStatus(k)}
+              className={`step ${k === job.status ? 'current' : i < idx ? 'done' : ''}`}>
+              <span className="step-dot">{i < idx ? '✓' : i + 1}</span>{l}
+            </button>
+          )
+        })}
+      </div>
+
+      <section className="card">
+        <h2>Property</h2>
+        {isNew && (
+          <Field label="Service">
+            <div className="seg">
+              {Object.entries(TYPE_LABEL).map(([k, l]) => (
+                <button type="button" key={k} className={job.type === k ? 'on' : ''} onClick={() => setJob({ ...job, type: k, status: 'enquiry' })}>{l}</button>
+              ))}
+            </div>
+          </Field>
+        )}
+        <Field label="Address"><input required value={job.property_address || ''} onChange={set('property_address')} placeholder="12 Banna Ave" /></Field>
+        <Field label="Suburb / town"><input value={job.suburb || ''} onChange={set('suburb')} /></Field>
+        <Field label="Access notes" hint="Crew can see this. Lockbox, parking, stairs, who to call.">
+          <textarea rows={2} value={job.access_notes || ''} onChange={set('access_notes')} />
+        </Field>
+      </section>
+
+      <section className="card">
+        <h2>Client</h2>
+        {newClient ? (
+          <div className="grid2">
+            <Field label="Name"><input value={newClient.name} onChange={(e) => setNewClient({ ...newClient, name: e.target.value })} /></Field>
+            <Field label="Agency"><input value={newClient.agency} onChange={(e) => setNewClient({ ...newClient, agency: e.target.value })} /></Field>
+            <Field label="Email"><input type="email" value={newClient.email} onChange={(e) => setNewClient({ ...newClient, email: e.target.value })} /></Field>
+            <Field label="Phone"><input type="tel" value={newClient.phone} onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })} /></Field>
+            <button type="button" className="btn btn-ghost" onClick={() => setNewClient(null)}>Pick existing instead</button>
+          </div>
+        ) : (
+          <>
+            <select value={job.client_id || ''} onChange={set('client_id')}>
+              <option value="">— Choose client —</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}{c.agency ? ` (${c.agency})` : ''}</option>)}
+            </select>
+            {client && (
+              <p className="small">
+                {client.phone && <><a href={`tel:${client.phone}`}>{client.phone}</a> · </>}
+                {client.email && <a href={`mailto:${client.email}`}>{client.email}</a>}
+              </p>
+            )}
+            <button type="button" className="btn btn-ghost btn-small" onClick={() => setNewClient({ name: '', agency: '', email: '', phone: '', kind: 'agent' })}>+ New client</button>
+          </>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>Dates</h2>
+        {job.type === 'consult' ? (
+          <Field label="Consult day"><input type="date" value={job.consult_date || ''} onChange={set('consult_date')} /></Field>
+        ) : (
+          <div className="grid2">
+            <Field label="Site visit"><input type="date" value={job.site_visit_date || ''} onChange={set('site_visit_date')} /></Field>
+            {job.type === 'staging' && <>
+              <Field label="Packing day"><input type="date" value={job.pack_date || ''} onChange={set('pack_date')} /></Field>
+              <Field label="Install day"><input type="date" value={job.install_date || ''} onChange={set('install_date')} /></Field>
+              <Field label="Hire (weeks)"><input type="number" min="1" max="52" inputMode="numeric" value={job.hire_weeks} onChange={set('hire_weeks')} /></Field>
+              <Field label="Collection day" hint={end ? `Hire ends ${fmtDate(end)}` : ''}>
+                <input type="date" value={job.collection_date || ''} onChange={set('collection_date')} />
+              </Field>
+              <Field label="Unpack day"><input type="date" value={job.unpack_date || ''} onChange={set('unpack_date')} /></Field>
+            </>}
+          </div>
+        )}
+        {job.type === 'staging' && job.install_date && !job.collection_date && (
+          <button type="button" className="btn btn-ghost btn-small" onClick={() => setJob({ ...job, collection_date: end })}>
+            Set collection to end of hire ({fmtDate(end)})
+          </button>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>Money <span className="muted small">only you see this</span></h2>
+        <div className="grid2">
+          <Field label="Quote ($)"><input type="number" step="0.01" inputMode="decimal" value={fin.quote_amount ?? ''} onChange={setF('quote_amount')} /></Field>
+          <Field label="Deposit ($)"><input type="number" step="0.01" inputMode="decimal" value={fin.deposit_amount ?? ''} onChange={setF('deposit_amount')} /></Field>
+          <Field label="Deposit paid on"><input type="date" value={fin.deposit_paid_on || ''} onChange={setF('deposit_paid_on')} /></Field>
+          <Field label="Paid in full on"><input type="date" value={fin.paid_in_full_on || ''} onChange={setF('paid_in_full_on')} /></Field>
+          <Field label="Invoice #"><input value={fin.invoice_ref || ''} onChange={setF('invoice_ref')} /></Field>
+        </div>
+        {balance !== null && <p className={balance > 0 ? 'warn-text' : 'ok-text'}>{balance > 0 ? `Balance owing ${money(balance)}` : 'Paid in full'}</p>}
+      </section>
+
+      <section className="card">
+        <h2>Notes</h2>
+        <textarea rows={3} value={job.notes || ''} onChange={set('notes')} placeholder="Style, colour palette, things to remember…" />
+      </section>
+
+      <div className="sticky-actions row">
+        <button className="btn btn-primary grow btn-big" disabled={busy}>{isNew ? 'Create job' : 'Save changes'}</button>
+      </div>
+    </form>
+
+      {!isNew && job.type === 'staging' && (
+        <section className="card">
+          <div className="row between">
+            <h2>Furniture <span className="muted small">{lines.length} items · {packedCount} packed</span></h2>
+          </div>
+          {!job.pack_date && !job.install_date ? (
+            <p className="note">Add a packing or install date (and save) before adding furniture, so the system can check it’s free.</p>
+          ) : (
+            <div className="row">
+              <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>+ Add furniture</button>
+              <button type="button" className="btn" onClick={() => { setFieldMode(true); nav(`/pick/${id}`) }}>Open pick list</button>
+            </div>
+          )}
+          {Object.keys(byRoom).length === 0 ? <Empty>Nothing added yet.</Empty> : Object.entries(byRoom).map(([room, ls]) => (
+            <div key={room}>
+              <h3 className="room">{room} <span className="muted small">{ls.length}</span></h3>
+              <ul className="list">
+                {ls.map((l) => (
+                  <li key={l.id} className="list-row">
+                    <Thumb url={l.items.photo_url} size={44} />
+                    <div className="grow">
+                      <Link to={`/inventory/${l.items.id}`} className="row-title">{l.items.name}</Link>
+                      <div className="row-sub">{l.items.code} · {l.returned_at ? 'Back in shed' : l.packed_at ? 'Packed / out' : `Shed ${l.items.shed_location || '—'}`}</div>
+                    </div>
+                    {!l.packed_at && <button type="button" className="btn btn-ghost btn-small" onClick={() => removeLine(l.id)}>Remove</button>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {!isNew && <ClientMessage job={job} client={client} />}
+
+      {!isNew && (
+        <div className="row">
+          {job.status !== 'cancelled' && <button type="button" className="btn btn-ghost" onClick={() => setStatus('cancelled')}>Cancel job</button>}
+          <button type="button" className="btn btn-ghost danger" onClick={deleteJob}>Delete job</button>
+        </div>
+      )}
+
+      {adding && <AddItems jobId={id} onClose={() => { setAdding(false); loadLines() }} />}
+
+      {conflicts && (
+        <Modal title="Those dates clash" onClose={() => setConflicts(null)}>
+          <p>These items are already booked on another job for the new dates:</p>
+          <ul className="list">
+            {conflicts.map((c, i) => (
+              <li key={i} className="list-row"><div className="grow">
+                <div className="row-title">{c.item_name} <span className="muted">{c.item_code}</span></div>
+                <div className="row-sub">Job #{c.other_job} · {c.other_address}</div>
+              </div></li>
+            ))}
+          </ul>
+          <p className="small muted">Remove them from this job (or the other one) first, then change the dates.</p>
+          <button type="button" className="btn btn-primary btn-block" onClick={() => setConflicts(null)}>OK</button>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+/** Picker that only ever shows items free for this job's dates */
+function AddItems({ jobId, onClose }) {
+  const [items, setItems] = useState(null)
+  const [room, setRoom] = useState(ROOMS[0])
+  const [q, setQ] = useState('')
+  const [sel, setSel] = useState(new Set())
+  const [busy, setBusy] = useState(false)
+  const [scan, setScan] = useState(false)
+  const [added, setAdded] = useState(0)
+
+  const load = useCallback(() => {
+    supabase.rpc('available_items', { p_job_id: jobId }).then(({ data, error }) => {
+      if (error) toast(friendlyError(error), 'error')
+      setItems(data || [])
+    })
+  }, [jobId])
+  useEffect(load, [load])
+
+  const shown = (items || []).filter((i) => {
+    const s = q.trim().toLowerCase()
+    return !s || [i.name, i.code, i.category, i.colour].some((v) => v?.toLowerCase().includes(s))
+  })
+
+  const add = async (ids) => {
+    if (!ids.length) return
+    setBusy(true)
+    const { error } = await supabase.from('job_items').insert(ids.map((item_id) => ({ job_id: jobId, item_id, room })))
+    setBusy(false)
+    if (error) { toast(friendlyError(error), 'error'); load(); return false }
+    setAdded((n) => n + ids.length)
+    setSel(new Set()); load()
+    toast(`${ids.length} added to ${room}`)
+    return true
+  }
+
+  const onScan = async (code) => {
+    const { data: it } = await supabase.from('items').select('id, name').eq('code', code).maybeSingle()
+    if (!it) return toast(`${code} not found`, 'error')
+    if (!(items || []).some((i) => i.id === it.id)) return toast(`${it.name} isn’t free for these dates (or already added)`, 'error')
+    await add([it.id])
+  }
+
+  return (
+    <Modal title="Add furniture" onClose={onClose}>
+      <Field label="Room">
+        <select value={room} onChange={(e) => setRoom(e.target.value)}>
+          {ROOMS.map((r) => <option key={r}>{r}</option>)}
+        </select>
+      </Field>
+      <div className="row">
+        <input className="search grow" placeholder="Search free items…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <button type="button" className="btn" onClick={() => setScan(true)}>Scan</button>
+      </div>
+      <p className="small muted">Showing only items free for this job’s dates. {added > 0 && `${added} added so far.`}</p>
+      {!items ? <Loading /> : shown.length === 0 ? <Empty>No free items match.</Empty> : (
+        <ul className="list picker">
+          {shown.map((i) => (
+            <li key={i.id}>
+              <label className="list-row">
+                <input type="checkbox" className="big-check" checked={sel.has(i.id)}
+                  onChange={() => { const n = new Set(sel); n.has(i.id) ? n.delete(i.id) : n.add(i.id); setSel(n) }} />
+                <Thumb url={i.photo_url} size={44} />
+                <div className="grow">
+                  <div className="row-title">{i.name}</div>
+                  <div className="row-sub">{i.code} · {i.category}{i.colour ? ` · ${i.colour}` : ''}</div>
+                </div>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="row sticky-actions">
+        <button type="button" className="btn btn-ghost" onClick={onClose}>Done</button>
+        <button type="button" className="btn btn-primary grow" disabled={!sel.size || busy} onClick={() => add([...sel])}>
+          Add {sel.size || ''} to {room}
+        </button>
+      </div>
+      {scan && (
+        <Scanner continuous title={`Scan to add to ${room}`} onClose={() => setScan(false)} onCode={onScan} />
+      )}
+    </Modal>
+  )
+}
+
+/** The “here are your dates” message she sends after install */
+function ClientMessage({ job, client }) {
+  if (job.type !== 'staging' || !job.install_date) return null
+  const first = client?.name?.split(' ')[0] || 'there'
+  const end = hireEnd(job)
+  const body =
+`Hi ${first},
+
+Your staging at ${job.property_address} is all installed. Here are your key dates:
+
+Installed: ${fmtLong(job.install_date)}
+Hire period: ${job.hire_weeks} weeks
+Hire ends: ${fmtLong(end)}
+${job.collection_date ? `Collection: ${fmtLong(job.collection_date)}\n` : ''}
+If the property sells sooner or you'd like to extend, just let me know.
+
+Thanks so much,
+House & Hues`
+  const subject = `Your staging dates – ${job.property_address}`
+  return (
+    <section className="card">
+      <h2>Send dates to client</h2>
+      <pre className="message">{body}</pre>
+      <div className="row">
+        <a className="btn btn-primary" href={`mailto:${client?.email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`}>Open in email</a>
+        <button type="button" className="btn" onClick={() => { navigator.clipboard.writeText(body); toast('Copied') }}>Copy</button>
+      </div>
+    </section>
+  )
+}
