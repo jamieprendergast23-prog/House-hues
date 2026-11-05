@@ -35,6 +35,7 @@ gh repo create house-hues --private --source=. --push
 | `SUPABASE_URL` | Project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | service_role key (secret, functions only) |
 | `SITE_URL` | the live site URL |
+| `VITE_ERP` | leave unset for Phase 1 (inventory only). Set to `1` to switch on bookings, calendar, clients and money. |
 | `NOTIFY_EMAIL` | where booking alerts go |
 | `RESEND_API_KEY` | from resend.com (free tier is plenty) |
 | `FROM_EMAIL` | optional, e.g. `House & Hues <hello@househues.com.au>` once her domain is verified in Resend. Also turns on the requester receipt email. |

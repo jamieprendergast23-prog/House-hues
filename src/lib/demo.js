@@ -98,7 +98,9 @@ function seed() {
     { quote_amount: 2600, deposit_amount: 1300, deposit_paid_on: d(-45), paid_in_full_on: d(-30) })
   assign(e, ['HH-0003', 'HH-0029', 'HH-0032'], 'Living', true)
 
-  job({ status: 'quote_sent', client_id: tom.id, property_address: '22 Yambil St', site_visit_date: d(3) }, { quote_amount: 3800 })
+  const f = job({ status: 'booked', client_id: tom.id, property_address: '22 Yambil St', site_visit_date: d(3), pack_date: d(9), install_date: d(10) }, { quote_amount: 3800 })
+  assign(f, ['HH-0010', 'HH-0015', 'HH-0016'], 'Dining')
+  assign(f, ['HH-0030', 'HH-0031'], 'Living')
   job({ type: 'consult', status: 'consult_booked', client_id: mel.id, property_address: '51 Jondaryan Ave', consult_date: d(2) }, { quote_amount: 250, paid_in_full_on: d(-1) })
 
   db.booking_requests.push(

@@ -1,3 +1,5 @@
+import { ERP } from './features'
+
 export const CATEGORIES = [
   'Sofa', 'Armchair', 'Dining table', 'Dining chair', 'Coffee table', 'Side table',
   'Bed frame', 'Mattress', 'Bedside table', 'Bedding', 'Rug', 'Lamp', 'Art',
@@ -14,6 +16,14 @@ export const ITEM_STATUS = { available: 'Available', repair: 'In repair', retire
 
 // Pipelines follow the owner's real process
 export const PIPELINES = {
+  // phase 1: just where the furniture is
+  simple: [
+    ['booked', 'Booked'],
+    ['packing', 'Packed'],
+    ['installed', 'At property'],
+    ['collected', 'Collected'],
+    ['complete', 'Back in shed'],
+  ],
   staging: [
     ['enquiry', 'Enquiry'],
     ['site_visit', 'Site visit'],
@@ -44,7 +54,7 @@ export const TYPE_LABEL = { staging: 'Staging', consult: 'Consult', design: 'Des
 
 export function statusLabel(type, status) {
   if (status === 'cancelled') return 'Cancelled'
-  const p = PIPELINES[type] || PIPELINES.staging
+  const p = ERP ? PIPELINES[type] || PIPELINES.staging : PIPELINES.simple
   return (p.find(([k]) => k === status) || [status, status])[1]
 }
 

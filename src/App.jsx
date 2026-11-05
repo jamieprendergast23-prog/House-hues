@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { configured, isDemo } from './lib/supabase'
 import { AuthProvider, useAuth } from './lib/auth'
 import { Toaster } from './lib/toast'
+import { ERP } from './lib/features'
 import { Loading } from './components/ui'
 import Layout from './components/Layout'
 import FieldLayout from './field/FieldLayout'
@@ -9,6 +10,8 @@ import FieldLayout from './field/FieldLayout'
 import Login from './pages/Login'
 import Book from './pages/Book'
 import Dashboard from './pages/Dashboard'
+import StockHome from './pages/StockHome'
+import ImportStock from './pages/ImportStock'
 import Inventory from './pages/Inventory'
 import ItemDetail from './pages/ItemDetail'
 import Labels from './pages/Labels'
@@ -30,7 +33,7 @@ export default function App() {
       <Toaster />
       {isDemo && <div className="demo-bar">Demo with sample data. Changes reset on refresh.</div>}
       <Routes>
-        <Route path="/book" element={<Book />} />
+        {ERP && <Route path="/book" element={<Book />} />}
         <Route path="/login" element={<Login />} />
         <Route path="/*" element={<Protected />} />
       </Routes>
@@ -61,15 +64,16 @@ function Protected() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<Dashboard />} />
+        <Route path="/" element={ERP ? <Dashboard /> : <StockHome />} />
+        <Route path="/import" element={<ImportStock />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/inventory/:id" element={<ItemDetail />} />
         <Route path="/i/:code" element={<ItemDetail byCode />} />
         <Route path="/labels" element={<Labels />} />
         <Route path="/jobs" element={<Jobs />} />
         <Route path="/jobs/:id" element={<JobDetail />} />
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/requests" element={<Requests />} />
+        {ERP && <Route path="/calendar" element={<CalendarPage />} />}
+        {ERP && <Route path="/requests" element={<Requests />} />}
         <Route path="/team" element={<Team />} />
         <Route path="/pick/:jobId" element={<PickList />} />
         <Route path="*" element={<Navigate to="/" replace />} />

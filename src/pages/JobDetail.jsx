@@ -4,11 +4,12 @@ import { supabase, friendlyError } from '../lib/supabase'
 import { PIPELINES, ROOMS, TYPE_LABEL } from '../lib/constants'
 import { fmtDate, fmtLong, hireEnd, money, addDays } from '../lib/format'
 import { toast } from '../lib/toast'
+import { ERP } from '../lib/features'
 import { Field, Modal, Thumb, Loading, TypeTag, JobPill, Empty } from '../components/ui'
 import Scanner from '../components/Scanner'
 
 const BLANK_JOB = {
-  type: 'staging', status: 'enquiry', property_address: '', suburb: '', access_notes: '', notes: '',
+  type: 'staging', status: ERP ? 'enquiry' : 'booked', property_address: '', suburb: '', access_notes: '', notes: '',
   client_id: null, site_visit_date: null, consult_date: null, pack_date: null, install_date: null,
   hire_weeks: 6, collection_date: null, unpack_date: null,
 }
@@ -61,7 +62,7 @@ export default function JobDetail() {
 
   const set = (k) => (e) => setJob({ ...job, [k]: e.target.value === '' ? null : e.target.value })
   const setF = (k) => (e) => setFin({ ...fin, [k]: e.target.value === '' ? null : e.target.value })
-  const pipeline = PIPELINES[job.type]
+  const pipeline = ERP ? PIPELINES[job.type] : PIPELINES.simple
 
   const save = async (e) => {
     e?.preventDefault()
@@ -144,8 +145,8 @@ export default function JobDetail() {
     <form onSubmit={save} className="stack">
       <div className="page-head">
         <div>
-          <h1>{isNew ? 'New job' : job.property_address}</h1>
-          {!isNew && <div className="row-pills"><span className="muted">#{job.job_number}</span><TypeTag type={job.type} /><JobPill job={job} /></div>}
+          <h1>{isNew ? (ERP ? 'New job' : 'New job: where is stock going?') : job.property_address}</h1>
+          {!isNew && <div className="row-pills"><span className="muted">#{job.job_number}</span>{ERP && <TypeTag type={job.type} />}<JobPill job={job} /></div>}
         </div>
       </div>
 
@@ -164,7 +165,7 @@ export default function JobDetail() {
 
       <section className="card">
         <h2>Property</h2>
-        {isNew && (
+        {isNew && ERP && (
           <Field label="Service">
             <div className="seg">
               {Object.entries(TYPE_LABEL).map(([k, l]) => (
@@ -180,7 +181,7 @@ export default function JobDetail() {
         </Field>
       </section>
 
-      <section className="card">
+      {ERP && <section className="card">
         <h2>Client</h2>
         {newClient ? (
           <div className="grid2">
@@ -205,7 +206,7 @@ export default function JobDetail() {
             <button type="button" className="btn btn-ghost btn-small" onClick={() => setNewClient({ name: '', agency: '', email: '', phone: '', kind: 'agent' })}>+ New client</button>
           </>
         )}
-      </section>
+      </section>}
 
       <section className="card">
         <h2>Dates</h2>
@@ -213,7 +214,7 @@ export default function JobDetail() {
           <Field label="Consult day"><input type="date" value={job.consult_date || ''} onChange={set('consult_date')} /></Field>
         ) : (
           <div className="grid2">
-            <Field label="Site visit"><input type="date" value={job.site_visit_date || ''} onChange={set('site_visit_date')} /></Field>
+            {ERP && <Field label="Site visit"><input type="date" value={job.site_visit_date || ''} onChange={set('site_visit_date')} /></Field>}
             {job.type === 'staging' && <>
               <Field label="Packing day"><input type="date" value={job.pack_date || ''} onChange={set('pack_date')} /></Field>
               <Field label="Install day"><input type="date" value={job.install_date || ''} onChange={set('install_date')} /></Field>
@@ -232,7 +233,7 @@ export default function JobDetail() {
         )}
       </section>
 
-      <section className="card">
+      {ERP && <section className="card">
         <h2>Money <span className="muted small">only you see this</span></h2>
         <div className="grid2">
           <Field label="Quote ($)"><input type="number" step="0.01" inputMode="decimal" value={fin.quote_amount ?? ''} onChange={setF('quote_amount')} /></Field>
@@ -242,7 +243,7 @@ export default function JobDetail() {
           <Field label="Invoice #"><input value={fin.invoice_ref || ''} onChange={setF('invoice_ref')} /></Field>
         </div>
         {balance !== null && <p className={balance > 0 ? 'warn-text' : 'ok-text'}>{balance > 0 ? `Balance owing ${money(balance)}` : 'Paid in full'}</p>}
-      </section>
+      </section>}
 
       <section className="card">
         <h2>Notes</h2>
@@ -287,7 +288,7 @@ export default function JobDetail() {
         </section>
       )}
 
-      {!isNew && <ClientMessage job={job} client={client} />}
+      {!isNew && ERP && <ClientMessage job={job} client={client} />}
 
       {!isNew && (
         <div className="row">

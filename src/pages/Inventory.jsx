@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { toCSV, downloadText } from '../lib/csv'
 import { supabase } from '../lib/supabase'
 import { CATEGORIES } from '../lib/constants'
 import { Thumb, ItemWhere, ConditionPill, Loading, Empty } from '../components/ui'
@@ -9,9 +10,10 @@ const WHERE = [['all', 'All'], ['in', 'In shed'], ['out', 'Out on jobs'], ['repa
 
 export default function Inventory() {
   const nav = useNavigate()
+  const loc = useLocation()
   const [items, setItems] = useState(null)
   const [q, setQ] = useState('')
-  const [cat, setCat] = useState('')
+  const [cat, setCat] = useState(loc.state?.cat || '')
   const [where, setWhere] = useState('all')
   const [scan, setScan] = useState(false)
   const [picking, setPicking] = useState(false)
@@ -53,6 +55,15 @@ export default function Inventory() {
     nav('/labels')
   }
 
+  const exportCSV = () => {
+    const rows = shown.map((i) => ({
+      Code: i.code, Name: i.name, Category: i.category, Colour: i.colour || '', Size: i.dimensions || '',
+      'Shed spot': i.shed_location || '', Condition: i.condition, Status: i.status,
+      'Out at': i.out_address || '', 'Next job': i.next_address || '', 'Next date': i.next_start || '',
+    }))
+    downloadText(`stock-${new Date().toISOString().slice(0, 10)}.csv`, toCSV(rows))
+  }
+
   if (!items) return <Loading />
 
   return (
@@ -89,6 +100,7 @@ export default function Inventory() {
         <button className="btn btn-small" onClick={printLabels}>
           Print QR labels ({picking && picked.size ? picked.size : shown.length})
         </button>
+        <button className="btn btn-small btn-ghost" onClick={exportCSV}>Export CSV</button>
       </div>
 
       {shown.length === 0 ? (

@@ -2,13 +2,19 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { ERP } from '../lib/features'
 
-const NAV = [
+const NAV = ERP ? [
   ['/', 'Home', '⌂'],
   ['/jobs', 'Jobs', '▤'],
   ['/inventory', 'Stock', '▦'],
   ['/calendar', 'Calendar', '▣'],
   ['/requests', 'Requests', '✉'],
+] : [
+  ['/', 'Overview', '⌂'],
+  ['/inventory', 'Stock', '▦'],
+  ['/jobs', 'Jobs', '▤'],
+  ['/import', 'Import', '⇪'],
 ]
 
 export default function Layout({ children }) {
@@ -17,6 +23,7 @@ export default function Layout({ children }) {
   const [newCount, setNewCount] = useState(0)
 
   useEffect(() => {
+    if (!ERP) return
     supabase.from('booking_requests').select('id', { count: 'exact', head: true }).eq('status', 'new')
       .then(({ count }) => setNewCount(count || 0))
   }, [])

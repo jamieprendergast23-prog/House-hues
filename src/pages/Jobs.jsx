@@ -3,10 +3,15 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fmtDate, hireEnd } from '../lib/format'
 import { JobPill, TypeTag, Loading, Empty } from '../components/ui'
+import { ERP } from '../lib/features'
 
-const TABS = [
+const TABS = ERP ? [
   ['active', 'Active'],
   ['enquiry', 'Enquiries & quotes'],
+  ['done', 'Done'],
+  ['all', 'All'],
+] : [
+  ['active', 'Upcoming & out'],
   ['done', 'Done'],
   ['all', 'All'],
 ]
@@ -30,7 +35,8 @@ export default function Jobs() {
     if (!jobs) return []
     const s = q.trim().toLowerCase()
     return jobs.filter((j) => {
-      if (tab === 'active' && (EARLY.includes(j.status) || DONE.includes(j.status))) return false
+      if (!ERP && j.type !== 'staging') return false
+      if (tab === 'active' && ((ERP && EARLY.includes(j.status)) || DONE.includes(j.status))) return false
       if (tab === 'enquiry' && !EARLY.includes(j.status)) return false
       if (tab === 'done' && !DONE.includes(j.status)) return false
       if (!s) return true
@@ -63,7 +69,7 @@ export default function Jobs() {
                   </div>
                   <div className="row-sub">{jobDates(j)}</div>
                   <div className="row-pills">
-                    <TypeTag type={j.type} /><JobPill job={j} />
+                    {ERP && <TypeTag type={j.type} />}<JobPill job={j} />
                     {j.type === 'staging' && <span className="pill pill-muted">{j.job_items?.[0]?.count || 0} items</span>}
                   </div>
                 </div>
