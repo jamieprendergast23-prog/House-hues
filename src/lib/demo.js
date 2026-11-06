@@ -364,6 +364,10 @@ const RPC = {
     db.item_events.push({ id: uid(), item_id: p_item_id, kind: 'damage', severity: p_condition, note: p_note?.trim() || null, photo_url: p_photo || null, created_by: session?.user.id, created_at: nowISO() })
     return null
   },
+  add_item_note({ p_item_id, p_note, p_photo }) {
+    db.item_events.push({ id: uid(), item_id: p_item_id, kind: 'note', note: p_note?.trim() || null, photo_url: p_photo || null, created_by: session?.user.id, created_at: nowISO() })
+    return null
+  },
   mark_repaired({ p_item_id, p_note }) {
     const i = db.items.find((r) => r.id === p_item_id)
     i.condition = 'good'

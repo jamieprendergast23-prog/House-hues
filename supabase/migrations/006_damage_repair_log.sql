@@ -45,3 +45,28 @@ grant execute on function public.mark_repaired(uuid, text) to authenticated;
 
 create policy "staff upload damage photos" on storage.objects for insert
   with check (bucket_id = 'item-photos' and (storage.foldername(name))[1] = 'damage' and is_staff());
+
+-- Anyone signed in (admin or crew) can add notes and mark repairs; history shows who.
+create function public.add_item_note(p_item_id uuid, p_note text, p_photo text default null)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not is_staff() then raise exception 'Not signed in'; end if;
+  if nullif(trim(p_note), '') is null and p_photo is null then raise exception 'Write a note or add a photo'; end if;
+  insert into item_events (item_id, kind, note, photo_url, created_by)
+  values (p_item_id, 'note', nullif(trim(p_note), ''), p_photo, auth.uid());
+end $$;
+revoke execute on function public.add_item_note(uuid, text, text) from public, anon;
+grant execute on function public.add_item_note(uuid, text, text) to authenticated;
+
+create or replace function public.mark_repaired(p_item_id uuid, p_note text default null)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not is_staff() then raise exception 'Not signed in'; end if;
+  update items set condition = 'good',
+    status = case when status = 'repair' then 'available'::item_status else status end
+  where id = p_item_id;
+  insert into item_events (item_id, kind, note, created_by)
+  values (p_item_id, 'repaired', nullif(trim(p_note), ''), auth.uid());
+end $$;
+
+create policy "staff see names" on public.profiles for select using (is_staff());

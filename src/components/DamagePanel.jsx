@@ -9,9 +9,9 @@ const when = (ts) => new Date(ts).toLocaleDateString('en-AU', { day: 'numeric', 
  * Damage & repairs for one item: report (with photo), mark repaired (admin), history.
  * onChange(newFields) lets the page update its own copy of the item.
  */
-export default function DamagePanel({ item, isAdmin, onChange }) {
+export default function DamagePanel({ item, onChange }) {
   const [events, setEvents] = useState(null)
-  const [mode, setMode] = useState(null) // report | repair
+  const [mode, setMode] = useState(null) // report | note | repair
   const [note, setNote] = useState('')
   const [severity, setSeverity] = useState('needs_repair')
   const [photo, setPhoto] = useState(null) // { blob, url }
@@ -33,16 +33,29 @@ export default function DamagePanel({ item, isAdmin, onChange }) {
 
   const reset = () => { setMode(null); setNote(''); setPhoto(null); setSeverity('needs_repair') }
 
+  const uploadPhoto = async () => {
+    if (!photo) return null
+    const path = `damage/${crypto.randomUUID()}.jpg`
+    const { error } = await supabase.storage.from('item-photos').upload(path, photo.blob, { contentType: 'image/jpeg' })
+    if (error) throw error
+    return supabase.storage.from('item-photos').getPublicUrl(path).data.publicUrl
+  }
+
+  const addNote = async () => {
+    setBusy(true)
+    try {
+      const photoUrl = await uploadPhoto()
+      const { error } = await supabase.rpc('add_item_note', { p_item_id: item.id, p_note: note, p_photo: photoUrl })
+      if (error) throw error
+      toast('Note added'); reset(); load()
+    } catch (e) { toast(friendlyError(e), 'error') }
+    setBusy(false)
+  }
+
   const report = async () => {
     setBusy(true)
     try {
-      let photoUrl = null
-      if (photo) {
-        const path = `damage/${crypto.randomUUID()}.jpg`
-        const { error } = await supabase.storage.from('item-photos').upload(path, photo.blob, { contentType: 'image/jpeg' })
-        if (error) throw error
-        photoUrl = supabase.storage.from('item-photos').getPublicUrl(path).data.publicUrl
-      }
+      const photoUrl = await uploadPhoto()
       const { error } = await supabase.rpc('flag_item', { p_item_id: item.id, p_condition: severity, p_note: note, p_photo: photoUrl })
       if (error) throw error
       onChange?.({ condition: severity, status: severity === 'needs_repair' ? 'repair' : item.status })
@@ -67,7 +80,7 @@ export default function DamagePanel({ item, isAdmin, onChange }) {
   return (
     <section className={`card damage ${item.condition === 'needs_repair' ? 'is-out' : damaged ? 'is-minor' : ''}`}>
       <div className="row between">
-        <h2>Damage &amp; repairs</h2>
+        <h2>Damage, issues &amp; notes</h2>
         <span className={`pill ${item.condition === 'needs_repair' ? 'pill-warn' : damaged ? 'pill-out' : 'pill-in'}`}>
           {item.condition === 'needs_repair' ? 'Needs repair · out of use' : damaged ? 'Minor damage · still in use' : 'Good'}
         </span>
@@ -76,7 +89,8 @@ export default function DamagePanel({ item, isAdmin, onChange }) {
       {!mode && (
         <div className="row">
           <button className="btn" onClick={() => setMode('report')}>Report damage</button>
-          {isAdmin && damaged && <button className="btn btn-primary" onClick={() => setMode('repair')}>Mark repaired</button>}
+          <button className="btn" onClick={() => setMode('note')}>Add note</button>
+          {damaged && <button className="btn btn-primary" onClick={() => setMode('repair')}>Mark repaired</button>}
         </div>
       )}
 
@@ -100,6 +114,21 @@ export default function DamagePanel({ item, isAdmin, onChange }) {
         </div>
       )}
 
+      {mode === 'note' && (
+        <div className="stack">
+          <label className="field"><span className="field-label">Note</span>
+            <textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Missing one cushion cover, wobbly leg, goes well with F102" autoFocus /></label>
+          <div className="row">
+            {photo ? <img className="damage-thumb" src={photo.url} alt="" /> : null}
+            <label className="btn">{photo ? 'Retake photo' : 'Add photo'}<input type="file" accept="image/*" capture="environment" hidden onChange={pickPhoto} /></label>
+          </div>
+          <div className="row">
+            <button className="btn btn-ghost" onClick={reset}>Cancel</button>
+            <button className="btn btn-primary grow" disabled={busy || (!note.trim() && !photo)} onClick={addNote}>{busy ? 'Saving…' : 'Save note'}</button>
+          </div>
+        </div>
+      )}
+
       {mode === 'repair' && (
         <div className="stack">
           <label className="field"><span className="field-label">What was done? (optional)</span>
@@ -116,7 +145,7 @@ export default function DamagePanel({ item, isAdmin, onChange }) {
           {events.map((e) => (
             <li key={e.id} className={`dl-${e.kind}`}>
               <div className="dl-head">
-                <b>{e.kind === 'repaired' ? 'Repaired' : e.severity === 'fair' ? 'Minor damage' : 'Damage, needs repair'}</b>
+                <b>{e.kind === 'repaired' ? 'Repaired' : e.kind === 'note' ? 'Note' : e.severity === 'fair' ? 'Minor damage' : 'Damage, needs repair'}</b>
                 <span className="muted small">{when(e.created_at)}{e.profiles?.full_name ? ` · ${e.profiles.full_name}` : ''}</span>
               </div>
               {e.note && <div>{e.note}</div>}

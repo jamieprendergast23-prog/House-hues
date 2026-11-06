@@ -5,11 +5,9 @@ import { fmtDate } from '../lib/format'
 import { toast } from '../lib/toast'
 import { Loading, Empty, ItemWhere, ConditionPill } from '../components/ui'
 import DamagePanel from '../components/DamagePanel'
-import { useAuth } from '../lib/auth'
 
 export default function FieldItem() {
   const { code } = useParams()
-  const { isAdmin } = useAuth()
   const [item, setItem] = useState(undefined)
   const [spot, setSpot] = useState('')
 
@@ -59,7 +57,7 @@ export default function FieldItem() {
         <div className="card"><p>Free. Lives at <strong>{item.shed_location || 'no spot set'}</strong>.</p></div>
       )}
 
-      <DamagePanel item={item} isAdmin={isAdmin} onChange={(f) => setItem({ ...item, ...f })} />
+      <DamagePanel item={item} onChange={(f) => setItem({ ...item, ...f })} />
 
       <Link to="/scan" className="btn btn-block btn-big">Scan another</Link>
     </div>

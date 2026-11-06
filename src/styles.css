@@ -473,3 +473,4 @@ input, select, textarea { border-radius: 4px; }
 .damage-log li.dl-repaired::before { background: var(--ok); }
 .dl-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .dl-head b { font-weight: 500; }
+.damage-log li.dl-note::before { background: var(--stone); }

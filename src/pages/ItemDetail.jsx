@@ -228,7 +228,7 @@ export default function ItemDetail({ byCode }) {
         {item.notes && <p className="pre small">{item.notes}</p>}
       </div>
 
-      <DamagePanel item={item} isAdmin onChange={(f) => setItem({ ...item, ...f })} />
+      <DamagePanel item={item} onChange={(f) => setItem({ ...item, ...f })} />
 
       <h2>Job history</h2>
       {history.length === 0 ? <Empty>Not used on a job yet.</Empty> : (
