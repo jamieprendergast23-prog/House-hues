@@ -106,6 +106,7 @@ export default function ImportStock() {
 
   const onFile = async (e) => {
     const f = e.target.files?.[0]
+    e.target.value = '' // so choosing the same file again still works
     if (!f) return
     if (/\.xls$/i.test(f.name)) return toast('That’s an old .xls file. Open it in Excel and Save As .xlsx first.', 'error')
     if (!/\.xlsx$/i.test(f.name)) return load(await f.text())
@@ -260,7 +261,7 @@ export default function ImportStock() {
         <section className="card highlight">
           <h2>Excel file with photos</h2>
           <p className="small muted">Pick the .xlsx straight from your computer. Photos in the sheet are matched to their row and attached to each piece. Big files are fine: it’s read on this device, nothing huge is uploaded. Best done on a laptop.</p>
-          <label className="btn btn-primary">Choose Excel file<input type="file" accept=".xlsx,.xls" hidden onChange={onFile} /></label>
+          <label className="btn btn-primary">Choose Excel file<input key="xlsx" type="file" accept=".xlsx,.xls" hidden onChange={onFile} onClick={(e) => { e.currentTarget.value = '' }} /></label>
         </section>
         <section className="card">
           <h2>No photos? Paste from Excel or Google Sheets</h2>
@@ -270,7 +271,7 @@ export default function ImportStock() {
         </section>
         <section className="card">
           <h2>Or a CSV file</h2>
-          <label className="btn">Choose CSV<input type="file" accept=".csv,.txt,.tsv" hidden onChange={onFile} /></label>
+          <label className="btn">Choose CSV<input key="csv" type="file" accept=".csv,.txt,.tsv" hidden onChange={onFile} onClick={(e) => { e.currentTarget.value = '' }} /></label>
         </section>
       </div>
     )
