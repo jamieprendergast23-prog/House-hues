@@ -49,10 +49,12 @@ function seed() {
     profiles: [ADMIN, CREW], items: [], item_costs: [], clients: [], jobs: [],
     job_finance: [], job_items: [], booking_requests: [], _itemSeq: 1, _jobSeq: 1001,
   }
+  const skus = {}, perLetter = {}
+  const skuFor = (name, cat) => skus[name] ||= `${cat[0]}${(perLetter[cat[0]] = (perLetter[cat[0]] || 0) + 1)}`
   STOCK.forEach(([name, category, colour, dimensions, shed_location], i) => {
     const id = uid()
     db.items.push({
-      id, code: `HH-${String(db._itemSeq++).padStart(4, '0')}`, name, category, colour, dimensions,
+      id, code: `HH-${String(db._itemSeq++).padStart(4, '0')}`, sku: skuFor(name, category), name, category, colour, dimensions,
       description: null, shed_location, condition: i === 5 ? 'needs_repair' : 'good',
       status: i === 5 ? 'repair' : 'available', photo_url: null,
       notes: i === 5 ? 'Broken weave on left arm' : null, created_at: nowISO(), updated_at: nowISO(),

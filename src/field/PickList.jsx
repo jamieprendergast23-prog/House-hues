@@ -19,7 +19,7 @@ export default function PickList() {
     const [j, l] = await Promise.all([
       supabase.from('jobs').select('*').eq('id', jobId).single(),
       supabase.from('job_items')
-        .select('id, room, packed_at, returned_at, items(id, code, name, category, colour, photo_url, shed_location)')
+        .select('id, room, packed_at, returned_at, items(id, code, sku, name, category, colour, photo_url, shed_location)')
         .eq('job_id', jobId),
     ])
     setJob(j.data)
@@ -119,7 +119,7 @@ export default function PickList() {
               {l.items.photo_url ? <img src={l.items.photo_url} alt="" /> : <span className="pick-noimg" />}
               <span className="pick-text">
                 <strong>{l.items.name}</strong>
-                <span>{l.items.code}{l.items.colour ? ` · ${l.items.colour}` : ''}</span>
+                <span>{l.items.sku ? `${l.items.sku} · ` : ''}{l.items.code}{l.items.colour ? ` · ${l.items.colour}` : ''}</span>
                 <span>{sort === 'room' ? `Shed: ${l.items.shed_location || '—'}` : `Room: ${l.room}`}</span>
               </span>
               <span className="pick-check">{doneOf(l) ? '✓' : ''}</span>

@@ -7,7 +7,7 @@ import { toast } from '../lib/toast'
 import { QrImg, Thumb, ItemWhere, Field, Loading, Empty } from '../components/ui'
 
 const BLANK = {
-  name: '', category: 'Sofa', colour: '', dimensions: '', description: '',
+  name: '', sku: '', category: 'Sofa', colour: '', dimensions: '', description: '',
   shed_location: '', condition: 'good', status: 'available', notes: '', photo_url: null,
 }
 
@@ -69,7 +69,7 @@ export default function ItemDetail({ byCode }) {
     e.preventDefault()
     setBusy(true)
     const fields = {
-      name: item.name.trim(), category: item.category, colour: item.colour || null,
+      name: item.name.trim(), sku: item.sku?.trim() || null, category: item.category, colour: item.colour || null,
       dimensions: item.dimensions || null, description: item.description || null,
       shed_location: item.shed_location || null, condition: item.condition,
       status: item.status, notes: item.notes || null, photo_url: item.photo_url,
@@ -120,7 +120,8 @@ export default function ItemDetail({ byCode }) {
           </label>
         </div>
 
-        <Field label="Name"><input required value={item.name} onChange={set('name')} placeholder="e.g. Linen 3-seater sofa" /></Field>
+        <Field label="Description"><input required value={item.name} onChange={set('name')} placeholder="e.g. Linen 3-seater sofa" /></Field>
+        <Field label="Your item code" hint="Your own code from the spreadsheet, e.g. V12. Optional."><input value={item.sku || ''} onChange={set('sku')} placeholder="V12" autoCapitalize="characters" /></Field>
         <div className="grid2">
           <Field label="Category">
             <select value={item.category} onChange={set('category')}>
@@ -170,7 +171,10 @@ export default function ItemDetail({ byCode }) {
   return (
     <div className="stack">
       <div className="page-head">
-        <h1>{item.name}</h1>
+        <div>
+          <h1 className="item-title">{item.name}</h1>
+          <div className="muted">{[item.sku, item.code].filter(Boolean).join(' · ')}</div>
+        </div>
         <div className="row">
           <button className="btn" onClick={() => setEditing(true)}>Edit</button>
         </div>
@@ -197,6 +201,9 @@ export default function ItemDetail({ byCode }) {
         {item.next_job_id && <p className="small">Next booked: <Link to={`/jobs/${item.next_job_id}`}>{item.next_address}</Link> from {fmtDate(item.next_start)}</p>}
         <dl className="dl">
           <dt>Category</dt><dd>{item.category}</dd>
+          {item.sku && <><dt>Your code</dt><dd>{item.sku}</dd></>}
+          {costs.supplier && <><dt>Shop</dt><dd>{costs.supplier}</dd></>}
+          {costs.purchase_cost && <><dt>Paid</dt><dd>${costs.purchase_cost}</dd></>}
           {item.colour && <><dt>Colour</dt><dd>{item.colour}</dd></>}
           {item.dimensions && <><dt>Size</dt><dd>{item.dimensions}</dd></>}
           <dt>Shed spot</dt><dd>{item.shed_location || '—'}</dd>

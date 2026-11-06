@@ -1,32 +1,39 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase, friendlyError } from '../lib/supabase'
+import { supabase, friendlyError, fetchAll } from '../lib/supabase'
 import { parseCSV } from '../lib/csv'
-import { CATEGORIES, CONDITIONS } from '../lib/constants'
+import { CATEGORIES } from '../lib/constants'
 import { toast } from '../lib/toast'
 import { compressImage } from '../lib/format'
 import { openWorkbook, readSheet, imageBlob, canShow } from '../lib/xlsx'
 
-// Fields we can fill, and header words that usually mean them
+// Fields we can fill, header words that usually mean them (best first), and words that rule a header out
 const FIELDS = [
-  ['name', 'Item name *', ['name', 'item', 'description', 'product', 'piece']],
-  ['category', 'Category', ['category', 'type', 'cat', 'group']],
-  ['colour', 'Colour', ['colour', 'color', 'finish']],
-  ['dimensions', 'Size', ['size', 'dimension', 'measure']],
-  ['shed_location', 'Shed spot', ['location', 'shed', 'bay', 'spot', 'where', 'shelf']],
-  ['qty', 'Quantity', ['qty', 'quantity', 'count', 'how many', 'number', 'units']],
-  ['condition', 'Condition', ['condition', 'state']],
-  ['purchase_cost', 'Cost paid ($)', ['cost', 'paid', 'price', 'purchase']],
-  ['replacement_value', 'Replacement ($)', ['replacement', 'value', 'rrp', 'worth']],
-  ['notes', 'Notes', ['note', 'comment']],
+  ['name', 'Description *', ['description', 'desc', 'item name', 'product', 'name', 'item'], ['code', 'no', '#']],
+  ['sku', 'Your item code', ['item code', 'code', 'sku', 'ref', 'item no', 'item #', 'stock no', 'no.', '#', 'id'], ['qty', 'description']],
+  ['category', 'Category', ['category', 'type', 'group', 'cat'], []],
+  ['colour', 'Colour', ['colour', 'color', 'finish'], []],
+  ['dimensions', 'Size', ['size', 'dimension', 'measure'], []],
+  ['shed_location', 'Shed spot', ['shed', 'bay', 'shelf', 'location', 'spot', 'where'], []],
+  ['qty', 'Quantity', ['qty', 'quantity', 'on hand', 'how many', 'count', 'units'], []],
+  ['condition', 'Condition', ['condition', 'state'], []],
+  ['supplier', 'Shop / supplier', ['shop', 'supplier', 'store', 'bought from', 'brand'], []],
+  ['purchase_cost', 'Price paid each ($)', ['price (ea', 'each', 'unit', 'price', 'cost', 'paid'], ['total']],
+  ['replacement_value', 'Value each ($)', ['est value', 'replacement', 'value', 'rrp', 'worth'], ['total']],
+  ['notes', 'Notes', ['note', 'comment'], []],
 ]
 
 function guess(headers) {
   const map = {}
   const used = new Set()
-  for (const [key, , words] of FIELDS) {
-    const idx = headers.findIndex((h, i) => !used.has(i) && words.some((w) => h.toLowerCase().includes(w)))
-    if (idx >= 0) { map[key] = idx; used.add(idx) }
+  const hs = headers.map((h) => (h || '').toLowerCase().trim())
+  for (const [key, , words, not] of FIELDS) {
+    let found = -1
+    for (const w of words) {
+      found = hs.findIndex((h, i) => !used.has(i) && h && h.includes(w) && !not.some((x) => h.includes(x) && !w.includes(x)))
+      if (found >= 0) break
+    }
+    if (found >= 0) { map[key] = found; used.add(found) }
   }
   return map
 }
@@ -59,13 +66,34 @@ export default function ImportStock() {
   const [sheets, setSheets] = useState(null)
   const [progress, setProgress] = useState(null)
   const book = useRef(null)
+  const [existing, setExisting] = useState(null) // pieces already in stock, for update matching
+  const [updateMode, setUpdateMode] = useState(true)
+
+  useEffect(() => {
+    if (!rows || existing) return
+    fetchAll(() => supabase.from('items').select('id, name, sku, category, photo_url').order('id'))
+      .then(setExisting).catch(() => setExisting([]))
+  }, [rows, existing])
 
   const applyRows = (r) => {
     // skip leading empty / title rows: headings are the first row with 2+ filled cells
     const start = Math.max(0, r.findIndex((x) => x.cells.filter((c) => c.trim()).length >= 2))
     const rr = r.slice(start)
     if (!rr.length) return toast('Couldn’t find any rows in that', 'error')
-    setRows(rr); setMap(guess(rr[0].cells)); setHasHeader(true)
+    const m = guess(rr[0].cells)
+    // a code column often has no heading: look for a column that's mostly short codes like A1, F23
+    if (m.sku === undefined) {
+      const used = new Set(Object.values(m))
+      const sample = rr.slice(1, 200)
+      let best = -1, bestN = 0
+      rr[0].cells.forEach((_, ci) => {
+        if (used.has(ci)) return
+        const n = sample.filter((r) => /^[A-Za-z]{1,3}-?\d{1,4}[A-Za-z]?$/.test((r.cells[ci] || '').trim())).length
+        if (n > bestN) { best = ci; bestN = n }
+      })
+      if (best >= 0 && bestN >= sample.length * 0.5) m.sku = best
+    }
+    setRows(rr); setMap(m); setHasHeader(true)
   }
 
   const load = (text) => { book.current = null; applyRows(parseCSV(text).map((cells) => ({ cells, images: [] }))) }
@@ -98,7 +126,7 @@ export default function ImportStock() {
     const get = (k) => (map[k] !== undefined ? (r[map[k]] || '').trim() : '')
     return {
       img: row.images.find(canShow) || null,
-      name: get('name'), category: matchCategory(get('category')), colour: get('colour') || null,
+      name: get('name') || get('sku'), sku: get('sku') || null, supplier: get('supplier') || null, category: matchCategory(get('category')), colour: get('colour') || null,
       dimensions: get('dimensions') || null, shed_location: get('shed_location') || null,
       condition: matchCondition(get('condition')), notes: get('notes') || null,
       qty: Math.max(1, Math.min(100, parseInt(get('qty'), 10) || 1)),
@@ -108,11 +136,30 @@ export default function ImportStock() {
 
   const pieces = parsed.reduce((n, r) => n + r.qty, 0)
   const withPhoto = parsed.filter((r) => r.img).length
-  const orphanPhotos = body.filter((r) => r.images.length && !(map.name !== undefined && (r.cells[map.name] || '').trim())).length
+  const orphanPhotos = body.filter((r) => r.images.length && ![map.name, map.sku].some((i) => i !== undefined && (r.cells[i] || '').trim())).length
+
+  // Re-importing the same sheet: match rows to pieces already in stock by her code
+  const plan = useMemo(() => {
+    const byCode = new Map()
+    for (const e of existing || []) {
+      for (const k of new Set([e.sku, e.name].filter(Boolean).map((x) => x.trim().toLowerCase()))) {
+        if (!byCode.has(k)) byCode.set(k, [])
+        byCode.get(k).push(e)
+      }
+    }
+    const taken = new Set()
+    return parsed.map((r) => {
+      const hits = updateMode && r.sku ? (byCode.get(r.sku.toLowerCase()) || []).filter((e) => !taken.has(e.id)).slice(0, r.qty) : []
+      hits.forEach((e) => taken.add(e.id))
+      return { r, hits, add: r.qty - hits.length }
+    })
+  }, [parsed, existing, updateMode])
+  const toUpdate = plan.reduce((n, p) => n + p.hits.length, 0)
+  const toAdd = plan.reduce((n, p) => n + p.add, 0)
 
   // upload each row's photo once (shrunk), 4 at a time
-  const uploadPhotos = async () => {
-    const todo = parsed.filter((r) => r.img)
+  const uploadPhotos = async (rowsNeeding) => {
+    const todo = rowsNeeding.filter((r) => r.img)
     const total = todo.length
     const urls = new Map()
     let done = 0
@@ -140,24 +187,54 @@ export default function ImportStock() {
   const run = async () => {
     setBusy(true)
     try {
-      const photos = book.current && withPhoto ? await uploadPhotos() : new Map()
-      const all = parsed.flatMap((r) => Array.from({ length: r.qty }, () => r))
+      // photos only where needed: new pieces, or matched pieces that have none yet
+      const needPhoto = plan.filter((p) => p.add > 0 || p.hits.some((h) => !h.photo_url)).map((p) => p.r)
+      const photos = book.current && withPhoto ? await uploadPhotos(needPhoto) : new Map()
+
+      // 1. update matched pieces (keeps their photos, QR codes and job history)
+      const upd = plan.filter((p) => p.hits.length)
+      let done = 0
+      setProgress({ label: 'Updating pieces', done, total: upd.length })
+      const updWorker = async () => {
+        while (upd.length) {
+          const { r, hits } = upd.shift()
+          const fields = {
+            name: r.name, sku: r.sku, category: r.category,
+            ...(r.colour ? { colour: r.colour } : {}), ...(r.dimensions ? { dimensions: r.dimensions } : {}),
+            ...(r.shed_location ? { shed_location: r.shed_location } : {}), ...(r.notes ? { notes: r.notes } : {}),
+          }
+          const { error } = await supabase.from('items').update(fields).in('id', hits.map((h) => h.id))
+          if (error) throw error
+          const noPhoto = hits.filter((h) => !h.photo_url).map((h) => h.id)
+          if (noPhoto.length && photos.get(r)) await supabase.from('items').update({ photo_url: photos.get(r) }).in('id', noPhoto)
+          if (r.purchase_cost !== null || r.replacement_value !== null || r.supplier) {
+            await supabase.from('item_costs').upsert(hits.map((h) => ({
+              item_id: h.id, purchase_cost: r.purchase_cost, replacement_value: r.replacement_value, supplier: r.supplier,
+            })))
+          }
+          setProgress({ label: 'Updating pieces', done: ++done, total: done + upd.length })
+        }
+      }
+      await Promise.all(Array.from({ length: 6 }, updWorker))
+
+      // 2. add new pieces
+      const all = plan.flatMap((p) => Array.from({ length: p.add }, () => p.r))
       setProgress({ label: 'Adding pieces', done: 0, total: all.length })
       for (let i = 0; i < all.length; i += 200) {
         const chunk = all.slice(i, i + 200)
         setProgress({ label: 'Adding pieces', done: i, total: all.length })
         const { data, error } = await supabase.from('items').insert(chunk.map((r) => ({
           photo_url: photos.get(r) || null,
-          name: r.name, category: r.category, colour: r.colour, dimensions: r.dimensions,
+          name: r.name, sku: r.sku, category: r.category, colour: r.colour, dimensions: r.dimensions,
           shed_location: r.shed_location, condition: r.condition, notes: r.notes,
           status: r.condition === 'needs_repair' ? 'repair' : 'available',
         }))).select('id')
         if (error) throw error
-        const costs = data.map((d, k) => ({ item_id: d.id, purchase_cost: chunk[k].purchase_cost, replacement_value: chunk[k].replacement_value }))
-          .filter((c) => c.purchase_cost !== null || c.replacement_value !== null)
+        const costs = data.map((d, k) => ({ item_id: d.id, purchase_cost: chunk[k].purchase_cost, replacement_value: chunk[k].replacement_value, supplier: chunk[k].supplier }))
+          .filter((c) => c.purchase_cost !== null || c.replacement_value !== null || c.supplier)
         if (costs.length) await supabase.from('item_costs').insert(costs)
       }
-      toast(`${all.length} pieces added${photos.size ? ` with ${photos.size} photos` : ''}`)
+      toast([toUpdate && `${toUpdate} pieces updated`, all.length && `${all.length} added`].filter(Boolean).join(', ') || 'Nothing to change')
       nav('/inventory')
     } catch (e) { toast(friendlyError(e), 'error') }
     setBusy(false); setProgress(null)
@@ -203,7 +280,7 @@ export default function ImportStock() {
     <div className="stack">
       <div className="page-head">
         <h1>Match your columns</h1>
-        <button className="btn btn-ghost" onClick={() => { setRows(null); setSheets(null); book.current = null }}>Start again</button>
+        <button className="btn btn-ghost" onClick={() => { setRows(null); setSheets(null); setExisting(null); book.current = null }}>Start again</button>
       </div>
       <label className="row small"><input type="checkbox" className="big-check" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} /> First row is headings</label>
 
@@ -222,14 +299,21 @@ export default function ImportStock() {
 
       <section className="card">
         <h2>Preview <span className="muted small">{parsed.length} rows → {pieces} pieces{book.current ? ` · ${withPhoto} with photos` : ''}</span></h2>
+        {existing?.length > 0 && (
+          <div className="card-soft">
+            <label className="row"><input type="checkbox" className="big-check" checked={updateMode} onChange={(e) => setUpdateMode(e.target.checked)} />
+              <span><strong>Update pieces already in stock</strong> (match by your item code). Keeps their photos and QR labels.</span></label>
+            <p className="small" style={{ marginTop: 6 }}>{toUpdate} pieces will be updated · {toAdd} new pieces added</p>
+          </div>
+        )}
         {orphanPhotos > 0 && <p className="small warn-text">{orphanPhotos} photos sit on rows with no item name, so they’ll be skipped. Check the picture is placed on the same row as its item.</p>}
-        {map.name === undefined ? <p className="warn-text">Pick which column has the item name.</p> : (
+        {map.name === undefined && map.sku === undefined ? <p className="warn-text">Pick which column has the description.</p> : (
           <div className="tbl-wrap">
             <table className="tbl">
-              <thead><tr>{book.current && <th>Photo</th>}<th>Name</th><th>Category</th><th>Colour</th><th>Qty</th><th>Shed</th><th>Condition</th></tr></thead>
+              <thead><tr>{book.current && <th>Photo</th>}<th>Code</th><th>Description</th><th>Category</th><th>Qty</th><th>Shop</th><th>Price ea</th></tr></thead>
               <tbody>
                 {parsed.slice(0, 12).map((r, i) => (
-                  <tr key={i}>{book.current && <td><PreviewImg path={r.img} book={book.current} /></td>}<td>{r.name}</td><td>{r.category}</td><td>{r.colour}</td><td>{r.qty}</td><td>{r.shed_location}</td><td>{CONDITIONS[r.condition]}</td></tr>
+                  <tr key={i}>{book.current && <td><PreviewImg path={r.img} book={book.current} /></td>}<td>{r.sku}</td><td>{r.name}</td><td>{r.category}</td><td>{r.qty}</td><td>{r.supplier}</td><td>{r.purchase_cost ?? ''}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -246,8 +330,8 @@ export default function ImportStock() {
         </div>
       )}
       <div className="sticky-actions row">
-        <button className="btn btn-primary btn-big grow" disabled={!pieces || busy} onClick={run}>
-          {busy ? 'Importing…' : `Add ${pieces} pieces to stock`}
+        <button className="btn btn-primary btn-big grow" disabled={!pieces || busy || (map.name === undefined && map.sku === undefined)} onClick={run}>
+          {busy ? 'Importing…' : toUpdate ? `Update ${toUpdate}${toAdd ? ` + add ${toAdd}` : ''} pieces` : `Add ${pieces} pieces to stock`}
         </button>
       </div>
     </div>

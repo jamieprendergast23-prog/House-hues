@@ -39,7 +39,7 @@ export default function FieldItem() {
       {item.photo_url && <img className="field-photo" src={item.photo_url} alt="" />}
       <div>
         <h1 className="field-title">{item.name}</h1>
-        <p className="muted">{item.code} · {item.category}{item.colour ? ` · ${item.colour}` : ''}{item.dimensions ? ` · ${item.dimensions}` : ''}</p>
+        <p className="muted">{item.sku ? `${item.sku} · ` : ''}{item.code} · {item.category}{item.colour ? ` · ${item.colour}` : ''}{item.dimensions ? ` · ${item.dimensions}` : ''}</p>
         <div className="row-pills"><ItemWhere item={item} /><ConditionPill c={item.condition} /></div>
       </div>
 

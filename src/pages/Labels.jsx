@@ -16,7 +16,7 @@ export default function Labels() {
     // fetch in chunks so long selections don't make the request URL too long
     const chunks = []
     for (let i = 0; i < ids.length; i += 150) chunks.push(ids.slice(i, i + 150))
-    Promise.all(chunks.map((c) => supabase.from('items').select('id, code, name, category').in('id', c)))
+    Promise.all(chunks.map((c) => supabase.from('items').select('id, code, sku, name, category').in('id', c)))
       .then((rs) => setItems(rs.flatMap((r) => r.data || [])
         .sort((a, b) => naturalCompare(a.category, b.category) || naturalCompare(a.name, b.name) || naturalCompare(a.code, b.code))))
   }, [])
@@ -44,8 +44,9 @@ export default function Labels() {
           <div key={i.id} className="label">
             <QrImg code={i.code} size={110} />
             <div className="label-text">
-              <strong>{i.code}</strong>
+              <strong>{i.sku || i.code}</strong>
               <span>{i.name}</span>
+              {i.sku && <small>{i.code}</small>}
               <small>House & Hues</small>
             </div>
           </div>

@@ -16,9 +16,9 @@ const isIn = (i) => !i.out_address && i.status === 'available'
 function groupPieces(items) {
   const map = new Map()
   for (const i of items) {
-    const key = `${i.category}\u0000${i.name}`
+    const key = `${i.category}\u0000${i.sku || ''}\u0000${i.name}`
     let g = map.get(key)
-    if (!g) { g = { key, name: i.name, category: i.category, pieces: [], photo: null }; map.set(key, g) }
+    if (!g) { g = { key, name: i.name, sku: i.sku, category: i.category, pieces: [], photo: null }; map.set(key, g) }
     g.pieces.push(i)
     if (!g.photo && i.photo_url) g.photo = i.photo_url
   }
@@ -61,13 +61,13 @@ export default function Inventory() {
       if (where === 'repair' && i.status !== 'repair') return false
       if (where === 'retired' ? i.status !== 'retired' : i.status === 'retired') return false
       if (!s) return true
-      return [i.name, i.code, i.colour, i.shed_location, i.category, i.description].some((v) => v?.toLowerCase().includes(s))
+      return [i.name, i.sku, i.code, i.colour, i.shed_location, i.category, i.description].some((v) => v?.toLowerCase().includes(s))
     })
   }, [items, q, cat, where])
 
   const groups = useMemo(() => {
     return groupPieces(shownPieces).sort((a, b) =>
-      naturalCompare(a.category, b.category) || naturalCompare(a.name, b.name))
+      naturalCompare(a.category, b.category) || naturalCompare(a.sku, b.sku) || naturalCompare(a.name, b.name))
   }, [shownPieces])
 
   const cats = useMemo(() => {
@@ -90,7 +90,7 @@ export default function Inventory() {
 
   const exportCSV = () => {
     const rows = shownPieces.map((i) => ({
-      Code: i.code, Name: i.name, Category: i.category, Colour: i.colour || '', Size: i.dimensions || '',
+      Code: i.code, 'Your code': i.sku || '', Description: i.name, Category: i.category, Colour: i.colour || '', Size: i.dimensions || '',
       'Shed spot': i.shed_location || '', Condition: i.condition, Status: i.status,
       'Out at': i.out_address || '', 'Next job': i.next_address || '', 'Next date': i.next_start || '',
     }))
@@ -147,13 +147,13 @@ export default function Inventory() {
               <button key={g.key} className={`tile ${picking && picked.has(g.key) ? 'picked' : ''}`}
                 onClick={() => (picking ? togglePick(g) : openGroup(g))}>
                 <div className="tile-img">
-                  {g.photo ? <img src={g.photo} alt="" loading="lazy" /> : <span className={`tile-code ${g.name.length > 6 ? "long" : ""}`}>{g.name}</span>}
+                  {g.photo ? <img src={g.photo} alt="" loading="lazy" /> : <span className={`tile-code ${(g.sku || g.name).length > 6 ? 'long' : ''}`}>{g.sku || g.name}</span>}
                   {g.pieces.length > 1 && <span className="tile-qty">×{g.pieces.length}</span>}
                   {picking && <span className="tile-check">{picked.has(g.key) ? '✓' : ''}</span>}
                 </div>
                 <div className="tile-body">
                   <div className="tile-name">{g.name}</div>
-                  <div className="tile-cat">{g.category}</div>
+                  <div className="tile-cat">{g.sku ? `${g.sku} · ` : ''}{g.category}</div>
                   <div className="tile-status">
                     {g.inCount > 0 && <span className="st st-in">{g.inCount} in</span>}
                     {g.outCount > 0 && <span className="st st-out">{g.outCount} out</span>}
@@ -173,9 +173,9 @@ export default function Inventory() {
       )}
 
       {open && (
-        <Modal title={`${open.name} · ${open.pieces.length} pieces`} onClose={() => setOpen(null)}>
+        <Modal title={open.name} onClose={() => setOpen(null)}>
           {open.photo && <img className="sheet-photo" src={open.photo} alt="" />}
-          <p className="muted small">{open.category} · each piece has its own QR code</p>
+          <p className="muted small">{[open.sku, open.category, `${open.pieces.length} pieces`].filter(Boolean).join(' · ')}. Each piece has its own QR code.</p>
           <ul className="list">
             {open.pieces.map((p) => (
               <li key={p.id}>
