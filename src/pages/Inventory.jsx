@@ -46,6 +46,8 @@ export default function Inventory() {
   const [picked, setPicked] = useState(new Set()) // group keys
   const [open, setOpen] = useState(null) // group shown in the pieces sheet
   const [limit, setLimit] = useState(PAGE)
+  const [view, setViewState] = useState(() => { try { return localStorage.getItem('hh-stock-view') || 'grid' } catch { return 'grid' } })
+  const setView = (v) => { setViewState(v); try { localStorage.setItem('hh-stock-view', v) } catch { /* ignore */ } }
 
   useEffect(() => {
     fetchAll(() => supabase.from('v_items').select('*').order('code')).then(setItems)
@@ -138,8 +140,12 @@ export default function Inventory() {
       <div className="page-head">
         <h1>Stock <span className="muted small">{groups.length} items · {shownPieces.length} pieces{shownPieces.length !== live ? ` of ${live}` : ''}</span></h1>
         <div className="row">
+          <div className="seg view-toggle" role="group" aria-label="View">
+            <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Photo view">▦ Photos</button>
+            <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="List view">☰ List</button>
+          </div>
           <button className="btn" onClick={() => setScan(true)}>Scan</button>
-          <Link className="btn btn-primary" to="/inventory/new">+ Add item</Link>
+          <Link className="btn btn-primary" to="/inventory/new">+ Add<span className="hide-sm"> item</span></Link>
         </div>
       </div>
 
@@ -190,6 +196,28 @@ export default function Inventory() {
         <Empty>{items.length ? 'Nothing matches.' : 'No stock yet. Tap “Add item” or Import to start.'}</Empty>
       ) : (
         <>
+          {view === 'list' ? (
+          <ul className="stock-list">
+            {groups.slice(0, limit).map((g) => (
+              <li key={g.key}>
+                <button className={`sl-row ${picking && picked.has(g.key) ? 'picked' : ''}`} onClick={() => (picking ? togglePick(g) : openGroup(g))}>
+                  {picking && <span className="sl-check">{picked.has(g.key) ? '✓' : ''}</span>}
+                  {g.photo ? <img className="sl-img" src={g.photo} alt="" loading="lazy" /> : <span className="sl-img sl-noimg">{g.sku || ''}</span>}
+                  <span className="sl-main">
+                    <span className="sl-name">{g.name}</span>
+                    <span className="sl-sub">{[g.sku, g.subcategory && g.subcategory !== 'To sort' ? g.subcategory : g.category].filter(Boolean).join(' · ')}</span>
+                  </span>
+                  <span className="sl-qty">{g.pieces.length > 1 ? `×${g.pieces.length}` : ''}</span>
+                  <span className="sl-status">
+                    {g.inCount > 0 && <span className="st st-in">{g.inCount} in</span>}
+                    {g.outCount > 0 && <span className="st st-out">{g.outCount} out</span>}
+                    {g.repairCount > 0 && <span className="st st-rep">{g.repairCount} repair</span>}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          ) : (
           <div className="tile-grid">
             {groups.slice(0, limit).map((g) => (
               <button key={g.key} className={`tile ${picking && picked.has(g.key) ? 'picked' : ''}`}
@@ -212,6 +240,7 @@ export default function Inventory() {
               </button>
             ))}
           </div>
+          )}
           {groups.length > limit && (
             <button className="btn btn-block" onClick={() => setLimit(limit + PAGE * 2)}>
               Show more ({groups.length - limit} left)
