@@ -22,3 +22,19 @@ export function friendlyError(err) {
   if (err.code === '23503') return 'This is still linked to a job, so it can’t be deleted. Retire it instead.'
   return msg
 }
+
+// Supabase returns at most 1000 rows per request; page through to get everything.
+// `build` must return a fresh query with a stable .order()
+export async function fetchAll(build, page = 1000) {
+  let out = []
+  for (let from = 0; ; from += page) {
+    const { data, error } = await build().range(from, from + page - 1)
+    if (error) throw error
+    out = out.concat(data || [])
+    if (!data || data.length < page) return out
+  }
+}
+
+// A1, A2 … A10 (not A1, A10, A2)
+export const naturalCompare = (a = '', b = '') =>
+  String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' })

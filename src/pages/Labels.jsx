@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, naturalCompare } from '../lib/supabase'
 import { QrImg, Loading, Empty } from '../components/ui'
 
 // Printable sheet sized for A4 21-up labels (Avery L7160 / 63.5 × 38.1 mm).
@@ -13,8 +13,12 @@ export default function Labels() {
   useEffect(() => {
     const ids = JSON.parse(sessionStorage.getItem('hh-labels') || '[]')
     if (!ids.length) { setItems([]); return }
-    supabase.from('items').select('id, code, name, category').in('id', ids).order('code')
-      .then(({ data }) => setItems(data || []))
+    // fetch in chunks so long selections don't make the request URL too long
+    const chunks = []
+    for (let i = 0; i < ids.length; i += 150) chunks.push(ids.slice(i, i + 150))
+    Promise.all(chunks.map((c) => supabase.from('items').select('id, code, name, category').in('id', c)))
+      .then((rs) => setItems(rs.flatMap((r) => r.data || [])
+        .sort((a, b) => naturalCompare(a.category, b.category) || naturalCompare(a.name, b.name) || naturalCompare(a.code, b.code))))
   }, [])
 
   if (!items) return <Loading />

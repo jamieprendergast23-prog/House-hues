@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, fetchAll } from '../lib/supabase'
 import { CATEGORIES } from '../lib/constants'
 import { today, fmtDate, money } from '../lib/format'
 import { Loading, Thumb } from '../components/ui'
@@ -14,8 +14,8 @@ export default function StockHome() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from('v_items').select('*'),
-      supabase.from('item_costs').select('item_id, purchase_cost, replacement_value'),
+      fetchAll(() => supabase.from('v_items').select('id, category, status, out_job_id, out_address, photo_url, shed_location, name, code, notes').order('id')).then((data) => ({ data })),
+      fetchAll(() => supabase.from('item_costs').select('item_id, purchase_cost, replacement_value').order('item_id')).then((data) => ({ data })),
       supabase.from('jobs').select('id, property_address, status, pack_date, install_date, job_items(count)')
         .eq('type', 'staging').not('status', 'in', '(cancelled,complete)'),
     ]).then(([i, c, j]) => setD({ items: i.data || [], costs: c.data || [], jobs: j.data || [] }))

@@ -204,6 +204,7 @@ class Query {
   ilike(c, v) { const s = v.toLowerCase(); this.filters.push((r) => (r[c] || '').toLowerCase() === s); return this }
   order(c, o = {}) { this.orders.push([c, o.ascending !== false, o.nullsFirst]); return this }
   limit(n) { this.lim = n; return this }
+  range(a, b) { this.rng = [a, b]; return this }
   single() { this.one = 'single'; return this }
   maybeSingle() { this.one = 'maybe'; return this }
   insert(rows) { this.op = 'insert'; this.payload = Array.isArray(rows) ? rows : [rows]; return this }
@@ -227,6 +228,7 @@ class Query {
       })
     }
     if (this.lim) out = out.slice(0, this.lim)
+    if (this.rng) out = out.slice(this.rng[0], this.rng[1] + 1)
     if (this.one) {
       if (!out.length) return this.one === 'single' ? err('No rows', 'PGRST116') : { data: null, error: null }
       return { data: out[0], error: null }
@@ -364,7 +366,12 @@ const RPC = {
 const photos = new Map()
 export const demoClient = {
   from: (t) => new Query(t),
-  rpc: async (name, args) => ({ data: RPC[name](args || {}), error: null }),
+  rpc: (name, args) => {
+    let rng = null
+    const run = () => { const d = RPC[name](args || {}); return { data: Array.isArray(d) && rng ? d.slice(rng[0], rng[1] + 1) : d, error: null } }
+    const q = { range(a, b) { rng = [a, b]; return q }, then(res, rej) { return Promise.resolve().then(run).then(res, rej) } }
+    return q
+  },
   auth: {
     getSession: async () => ({ data: { session } }),
     onAuthStateChange: (fn) => { authListeners.add(fn); return { data: { subscription: { unsubscribe: () => authListeners.delete(fn) } } } },

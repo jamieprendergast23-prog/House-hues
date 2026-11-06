@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
-import { supabase, friendlyError } from '../lib/supabase'
+import { supabase, friendlyError, fetchAll } from '../lib/supabase'
 import { PIPELINES, ROOMS, TYPE_LABEL } from '../lib/constants'
 import { fmtDate, fmtLong, hireEnd, money, addDays } from '../lib/format'
 import { toast } from '../lib/toast'
@@ -329,10 +329,9 @@ function AddItems({ jobId, onClose }) {
   const [added, setAdded] = useState(0)
 
   const load = useCallback(() => {
-    supabase.rpc('available_items', { p_job_id: jobId }).then(({ data, error }) => {
-      if (error) toast(friendlyError(error), 'error')
-      setItems(data || [])
-    })
+    fetchAll(() => supabase.rpc('available_items', { p_job_id: jobId }))
+      .then(setItems)
+      .catch((error) => { toast(friendlyError(error), 'error'); setItems([]) })
   }, [jobId])
   useEffect(load, [load])
 
