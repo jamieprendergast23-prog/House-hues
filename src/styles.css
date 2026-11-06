@@ -426,3 +426,7 @@ input, select, textarea { border-radius: 4px; }
 .hc-line b { font-weight: 500; }
 .hc-sub { font-size: .82rem; color: var(--muted); margin-bottom: 4px; }
 .house-card .pill { margin-top: 4px; }
+.subchips { padding-left: 10px; border-left: 2px solid var(--line); }
+.chip-warn { border-color: var(--warn); color: var(--warn); }
+.chip-warn.on { background: var(--warn); border-color: var(--warn); color: #fff; }
+.move-to { gap: 6px; }

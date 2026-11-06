@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { supabase, friendlyError } from '../lib/supabase'
+import { supabase, friendlyError, fetchAll, naturalCompare } from '../lib/supabase'
 import { CATEGORIES, CONDITIONS, ITEM_STATUS } from '../lib/constants'
 import { fmtDate, compressImage } from '../lib/format'
 import { toast } from '../lib/toast'
 import { QrImg, Thumb, ItemWhere, Field, Loading, Empty } from '../components/ui'
 
 const BLANK = {
-  name: '', sku: '', category: 'Sofa', colour: '', dimensions: '', description: '',
+  name: '', sku: '', subcategory: '', category: 'Furniture', colour: '', dimensions: '', description: '',
   shed_location: '', condition: 'good', status: 'available', notes: '', photo_url: null,
 }
 
@@ -22,6 +22,17 @@ export default function ItemDetail({ byCode }) {
   const [busy, setBusy] = useState(false)
   const [missing, setMissing] = useState(false)
   const [copies, setCopies] = useState(1)
+  const [all, setAll] = useState([])
+
+  // her own categories / groups, for the pick lists in the form
+  useEffect(() => {
+    if (!editing) return
+    fetchAll(() => supabase.from('items').select('category, subcategory').order('category')).then(setAll).catch(() => {})
+  }, [editing])
+  const lists = useMemo(() => ({
+    cats: [...new Set([...all.map((r) => r.category), ...CATEGORIES])].filter(Boolean).sort(naturalCompare),
+    subs: (cat) => [...new Set(all.filter((r) => r.category === cat).map((r) => r.subcategory))].filter(Boolean).sort(naturalCompare),
+  }), [all])
 
   useEffect(() => {
     if (isNew) return
@@ -69,7 +80,7 @@ export default function ItemDetail({ byCode }) {
     e.preventDefault()
     setBusy(true)
     const fields = {
-      name: item.name.trim(), sku: item.sku?.trim() || null, category: item.category, colour: item.colour || null,
+      name: item.name.trim(), sku: item.sku?.trim() || null, subcategory: item.subcategory?.trim() || null, category: item.category, colour: item.colour || null,
       dimensions: item.dimensions || null, description: item.description || null,
       shed_location: item.shed_location || null, condition: item.condition,
       status: item.status, notes: item.notes || null, photo_url: item.photo_url,
@@ -124,9 +135,12 @@ export default function ItemDetail({ byCode }) {
         <Field label="Your item code" hint="Your own code from the spreadsheet, e.g. V12. Optional."><input value={item.sku || ''} onChange={set('sku')} placeholder="V12" autoCapitalize="characters" /></Field>
         <div className="grid2">
           <Field label="Category">
-            <select value={item.category} onChange={set('category')}>
-              {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-            </select>
+            <input list="cats" required value={item.category || ''} onChange={set('category')} placeholder="Furniture" />
+          </Field>
+          <datalist id="cats">{lists.cats.map((c) => <option key={c} value={c} />)}</datalist>
+          <datalist id="subcats">{lists.subs(item.category).map((c) => <option key={c} value={c} />)}</datalist>
+          <Field label="Group" hint="Optional, e.g. Sofas & lounges">
+            <input list="subcats" value={item.subcategory || ''} onChange={set('subcategory')} placeholder="Sofas & lounges" />
           </Field>
           <Field label="Colour"><input value={item.colour || ''} onChange={set('colour')} placeholder="Oatmeal" /></Field>
           <Field label="Size"><input value={item.dimensions || ''} onChange={set('dimensions')} placeholder="220 × 90 cm / Queen" /></Field>
@@ -200,7 +214,7 @@ export default function ItemDetail({ byCode }) {
         {item.out_job_id && <p className="small">Since {fmtDate(item.out_since?.slice(0, 10))} · <Link to={`/jobs/${item.out_job_id}`}>open job</Link></p>}
         {item.next_job_id && <p className="small">Next booked: <Link to={`/jobs/${item.next_job_id}`}>{item.next_address}</Link> from {fmtDate(item.next_start)}</p>}
         <dl className="dl">
-          <dt>Category</dt><dd>{item.category}</dd>
+          <dt>Category</dt><dd>{item.category}{item.subcategory ? ` › ${item.subcategory}` : ''}</dd>
           {item.sku && <><dt>Your code</dt><dd>{item.sku}</dd></>}
           {costs.supplier && <><dt>Shop</dt><dd>{costs.supplier}</dd></>}
           {costs.purchase_cost && <><dt>Paid</dt><dd>${costs.purchase_cost}</dd></>}

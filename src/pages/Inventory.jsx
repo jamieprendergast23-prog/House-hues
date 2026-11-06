@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { supabase, fetchAll, naturalCompare } from '../lib/supabase'
+import { supabase, fetchAll, naturalCompare, friendlyError } from '../lib/supabase'
+import { toast } from '../lib/toast'
 import { ITEM_STATUS } from '../lib/constants'
 import { toCSV, downloadText } from '../lib/csv'
 import { fmtDate } from '../lib/format'
@@ -18,7 +19,7 @@ function groupPieces(items) {
   for (const i of items) {
     const key = `${i.category}\u0000${i.sku || ''}\u0000${i.name}`
     let g = map.get(key)
-    if (!g) { g = { key, name: i.name, sku: i.sku, category: i.category, pieces: [], photo: null }; map.set(key, g) }
+    if (!g) { g = { key, name: i.name, sku: i.sku, category: i.category, subcategory: i.subcategory, pieces: [], photo: null }; map.set(key, g) }
     g.pieces.push(i)
     if (!g.photo && i.photo_url) g.photo = i.photo_url
   }
@@ -37,6 +38,8 @@ export default function Inventory() {
   const [items, setItems] = useState(null)
   const [q, setQ] = useState('')
   const [cat, setCat] = useState(loc.state?.cat || '')
+  const [subcat, setSubcat] = useState('')
+  const [moveTo, setMoveTo] = useState('')
   const [where, setWhere] = useState('all')
   const [scan, setScan] = useState(false)
   const [picking, setPicking] = useState(false)
@@ -49,25 +52,27 @@ export default function Inventory() {
   }, [])
 
   // reset paging whenever the filter changes
-  useEffect(() => { setLimit(PAGE) }, [q, cat, where])
+  useEffect(() => { setLimit(PAGE) }, [q, cat, subcat, where])
+  useEffect(() => { setSubcat('') }, [cat])
 
   const shownPieces = useMemo(() => {
     if (!items) return []
     const s = q.trim().toLowerCase()
     return items.filter((i) => {
       if (cat && i.category !== cat) return false
+      if (subcat && (i.subcategory || '') !== subcat) return false
       if (where === 'in' && !isIn(i)) return false
       if (where === 'out' && !i.out_address) return false
       if (where === 'repair' && i.status !== 'repair') return false
       if (where === 'retired' ? i.status !== 'retired' : i.status === 'retired') return false
       if (!s) return true
-      return [i.name, i.sku, i.code, i.colour, i.shed_location, i.category, i.description].some((v) => v?.toLowerCase().includes(s))
+      return [i.name, i.sku, i.code, i.subcategory, i.colour, i.shed_location, i.category, i.description].some((v) => v?.toLowerCase().includes(s))
     })
-  }, [items, q, cat, where])
+  }, [items, q, cat, subcat, where])
 
   const groups = useMemo(() => {
     return groupPieces(shownPieces).sort((a, b) =>
-      naturalCompare(a.category, b.category) || naturalCompare(a.sku, b.sku) || naturalCompare(a.name, b.name))
+      naturalCompare(a.category, b.category) || naturalCompare(a.subcategory, b.subcategory) || naturalCompare(a.sku, b.sku) || naturalCompare(a.name, b.name))
   }, [shownPieces])
 
   const cats = useMemo(() => {
@@ -75,6 +80,30 @@ export default function Inventory() {
     for (const i of items || []) if (i.status !== 'retired') counts[i.category] = (counts[i.category] || 0) + 1
     return Object.entries(counts).sort((a, b) => naturalCompare(a[0], b[0]))
   }, [items])
+
+  // sub-groups for the chosen category (e.g. Furniture > Sofas & lounges)
+  const subs = useMemo(() => {
+    if (!cat) return []
+    const counts = {}
+    for (const i of items || []) if (i.category === cat && i.status !== 'retired' && i.subcategory) counts[i.subcategory] = (counts[i.subcategory] || 0) + 1
+    return Object.entries(counts).sort((a, b) => (a[0] === 'To sort') - (b[0] === 'To sort') || naturalCompare(a[0], b[0]))
+  }, [items, cat])
+  const allSubs = useMemo(() => [...new Set((items || []).filter((i) => !cat || i.category === cat).map((i) => i.subcategory).filter(Boolean))].sort(naturalCompare), [items, cat])
+
+  const moveSelected = async () => {
+    let target = moveTo
+    if (target === '__new') target = (window.prompt('New group name') || '').trim()
+    if (!target) return
+    const ids = groups.filter((g) => picked.has(g.key)).flatMap((g) => g.pieces.map((p) => p.id))
+    for (let i = 0; i < ids.length; i += 150) {
+      const { error } = await supabase.from('items').update({ subcategory: target }).in('id', ids.slice(i, i + 150))
+      if (error) return toast(friendlyError(error), 'error')
+    }
+    const set = new Set(ids)
+    setItems(items.map((i) => (set.has(i.id) ? { ...i, subcategory: target } : i)))
+    toast(`Moved ${picked.size} items to ${target}`)
+    setPicked(new Set()); setMoveTo('')
+  }
 
   const togglePick = (g) => {
     const n = new Set(picked)
@@ -128,6 +157,15 @@ export default function Inventory() {
         ))}
       </div>
 
+      {subs.length > 0 && (
+        <div className="chips subchips">
+          <button className={`chip ${!subcat ? 'on' : ''}`} onClick={() => setSubcat('')}>All {cat.toLowerCase()}</button>
+          {subs.map(([c, n]) => (
+            <button key={c} className={`chip ${subcat === c ? 'on' : ''} ${c === 'To sort' ? 'chip-warn' : ''}`} onClick={() => setSubcat(c)}>{c} <span className="chip-n">{n}</span></button>
+          ))}
+        </div>
+      )}
+
       <div className="row toolbar">
         <button className="btn btn-small btn-ghost" onClick={() => { setPicking(!picking); setPicked(new Set()) }}>
           {picking ? 'Cancel select' : 'Select'}
@@ -136,6 +174,16 @@ export default function Inventory() {
           Print QR labels ({picking && picked.size ? pickedPieces : shownPieces.length})
         </button>
         <button className="btn btn-small btn-ghost" onClick={exportCSV}>Export CSV</button>
+        {picking && picked.size > 0 && (
+          <span className="row move-to">
+            <select value={moveTo} onChange={(e) => setMoveTo(e.target.value)} style={{ width: 'auto', minHeight: 38 }}>
+              <option value="">Move {picked.size} to group…</option>
+              {allSubs.filter((s) => s !== 'To sort').map((s) => <option key={s} value={s}>{s}</option>)}
+              <option value="__new">+ New group…</option>
+            </select>
+            <button className="btn btn-small btn-primary" disabled={!moveTo} onClick={moveSelected}>Move</button>
+          </span>
+        )}
       </div>
 
       {groups.length === 0 ? (
@@ -153,7 +201,7 @@ export default function Inventory() {
                 </div>
                 <div className="tile-body">
                   <div className="tile-name">{g.name}</div>
-                  <div className="tile-cat">{g.sku ? `${g.sku} · ` : ''}{g.category}</div>
+                  <div className="tile-cat">{g.sku ? `${g.sku} · ` : ''}{g.subcategory && g.subcategory !== 'To sort' ? g.subcategory : g.category}</div>
                   <div className="tile-status">
                     {g.inCount > 0 && <span className="st st-in">{g.inCount} in</span>}
                     {g.outCount > 0 && <span className="st st-out">{g.outCount} out</span>}
