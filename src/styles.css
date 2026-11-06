@@ -497,3 +497,5 @@ input, select, textarea { border-radius: 4px; }
 .viewer-top { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); color: #fff; font-size: .9rem; }
 .viewer img { max-width: 100%; max-height: 82vh; object-fit: contain; }
 .viewer-cap { color: #ddd; padding: 10px 16px; text-align: center; }
+button.house-card { width: 100%; text-align: left; font: inherit; cursor: pointer; }
+.action-sheet .btn-block + .btn-block { margin-top: 8px; }
