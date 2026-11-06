@@ -12,9 +12,10 @@ const NAV = ERP ? [
   ['/calendar', 'Calendar', '▣'],
   ['/requests', 'Requests', '✉'],
 ] : [
-  ['/', 'Overview', '⌂'],
+  ['/', 'Overview', '◎'],
   ['/inventory', 'Stock', '▦'],
-  ['/jobs', 'Jobs', '▤'],
+  ['/houses', 'Houses', '⌂'],
+  ['/calendar', 'Calendar', '▣'],
   ['/import', 'Import', '⇪'],
 ]
 

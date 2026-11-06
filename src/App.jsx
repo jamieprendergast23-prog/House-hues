@@ -2,7 +2,8 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { configured, isDemo } from './lib/supabase'
 import { AuthProvider, useAuth } from './lib/auth'
 import { Toaster } from './lib/toast'
-import { ERP } from './lib/features'
+import { ERP, PLANNER } from './lib/features'
+import Houses from './pages/Houses'
 import { Loading } from './components/ui'
 import Layout from './components/Layout'
 import FieldLayout from './field/FieldLayout'
@@ -72,7 +73,8 @@ function Protected() {
         <Route path="/labels" element={<Labels />} />
         <Route path="/jobs" element={<Jobs />} />
         <Route path="/jobs/:id" element={<JobDetail />} />
-        {ERP && <Route path="/calendar" element={<CalendarPage />} />}
+        {(ERP || PLANNER) && <Route path="/calendar" element={<CalendarPage />} />}
+        <Route path="/houses" element={<Houses />} />
         {ERP && <Route path="/requests" element={<Requests />} />}
         <Route path="/team" element={<Team />} />
         <Route path="/pick/:jobId" element={<PickList />} />

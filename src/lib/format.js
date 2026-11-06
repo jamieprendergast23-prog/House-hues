@@ -33,6 +33,7 @@ export function money(n) {
 }
 
 export function hireEnd(job) {
+  if (job?.hire_end_date) return job.hire_end_date
   return job?.install_date ? addDays(job.install_date, (job.hire_weeks || 6) * 7) : null
 }
 

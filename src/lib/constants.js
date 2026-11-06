@@ -18,6 +18,7 @@ export const ITEM_STATUS = { available: 'Available', repair: 'In repair', retire
 export const PIPELINES = {
   // phase 1: just where the furniture is
   simple: [
+    ['quote_sent', 'Quote'],
     ['booked', 'Booked'],
     ['packing', 'Packed'],
     ['installed', 'At property'],

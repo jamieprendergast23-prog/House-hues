@@ -4,21 +4,22 @@ import { supabase, friendlyError, fetchAll } from '../lib/supabase'
 import { PIPELINES, ROOMS, TYPE_LABEL } from '../lib/constants'
 import { fmtDate, fmtLong, hireEnd, money, addDays } from '../lib/format'
 import { toast } from '../lib/toast'
-import { ERP } from '../lib/features'
+import { ERP, PLANNER } from '../lib/features'
+import HireCard from '../components/HireCard'
 import { Field, Modal, Thumb, Loading, TypeTag, JobPill, Empty } from '../components/ui'
 import Scanner from '../components/Scanner'
 
 const BLANK_JOB = {
   type: 'staging', status: ERP ? 'enquiry' : 'booked', property_address: '', suburb: '', access_notes: '', notes: '',
   client_id: null, site_visit_date: null, consult_date: null, pack_date: null, install_date: null,
-  hire_weeks: 6, collection_date: null, unpack_date: null,
+  hire_weeks: 6, hire_end_date: null, collection_date: null, unpack_date: null,
 }
 
 // Mirror of jobs.hold_period in the database
 function holdRange(j) {
   const start = j.pack_date || j.install_date
   if (!start) return null
-  let end = j.unpack_date || j.collection_date ||
+  let end = j.unpack_date || j.collection_date || j.hire_end_date ||
     (j.install_date ? addDays(j.install_date, j.hire_weeks * 7) : addDays(j.pack_date, j.hire_weeks * 7))
   if (end < start) end = start
   return `[${start},${end}]`
@@ -102,7 +103,7 @@ export default function JobDetail() {
       }
       // 4. money
       const { job_id: _j, ...f } = fin
-      if (Object.values(f).some((v) => v !== null && v !== undefined && v !== '')) {
+      if (Object.keys(f).length) {
         await supabase.from('job_finance').upsert({ job_id: jobId, ...f })
       }
       toast('Saved')
@@ -181,7 +182,7 @@ export default function JobDetail() {
         </Field>
       </section>
 
-      {ERP && <section className="card">
+      {(ERP || PLANNER) && <section className="card">
         <h2>Client</h2>
         {newClient ? (
           <div className="grid2">
@@ -219,6 +220,9 @@ export default function JobDetail() {
               <Field label="Packing day"><input type="date" value={job.pack_date || ''} onChange={set('pack_date')} /></Field>
               <Field label="Install day"><input type="date" value={job.install_date || ''} onChange={set('install_date')} /></Field>
               <Field label="Hire (weeks)"><input type="number" min="1" max="52" inputMode="numeric" value={job.hire_weeks} onChange={set('hire_weeks')} /></Field>
+              <Field label="Hire finish" hint={job.hire_end_date ? 'Set by hand (extended)' : job.install_date ? `Auto: ${fmtDate(hireEnd({ ...job, hire_end_date: null }))}. Change if extended.` : 'Install day + hire weeks'}>
+                <input type="date" value={job.hire_end_date || ''} onChange={set('hire_end_date')} />
+              </Field>
               <Field label="Collection day" hint={end ? `Hire ends ${fmtDate(end)}` : ''}>
                 <input type="date" value={job.collection_date || ''} onChange={set('collection_date')} />
               </Field>
@@ -232,6 +236,25 @@ export default function JobDetail() {
           </button>
         )}
       </section>
+
+      {!ERP && PLANNER && (
+        <section className="card">
+          <h2>Payment</h2>
+          <div className="seg seg-big">
+            {[['none', 'Not paid'], ['deposit', 'Deposit paid'], ['full', 'Paid in full']].map(([k, l]) => {
+              const cur = fin.paid_in_full_on ? 'full' : fin.deposit_paid_on ? 'deposit' : 'none'
+              return (
+                <button type="button" key={k} className={cur === k ? 'on' : ''} onClick={() => setFin({
+                  ...fin,
+                  deposit_paid_on: k === 'none' ? null : fin.deposit_paid_on || new Date().toISOString().slice(0, 10),
+                  paid_in_full_on: k === 'full' ? fin.paid_in_full_on || new Date().toISOString().slice(0, 10) : null,
+                })}>{l}</button>
+              )
+            })}
+          </div>
+          <p className="small muted">Save changes to keep it.</p>
+        </section>
+      )}
 
       {ERP && <section className="card">
         <h2>Money <span className="muted small">only you see this</span></h2>
@@ -289,6 +312,7 @@ export default function JobDetail() {
       )}
 
       {!isNew && ERP && <ClientMessage job={job} client={client} />}
+      {!isNew && PLANNER && job.type === 'staging' && job.install_date && <HireCard job={job} client={client} fin={fin} />}
 
       {!isNew && (
         <div className="row">

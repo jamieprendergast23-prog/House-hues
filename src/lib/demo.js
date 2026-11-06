@@ -69,7 +69,7 @@ function seed() {
     const r = {
       id: uid(), job_number: db._jobSeq++, type: 'staging', status: 'enquiry', client_id: null,
       property_address: '', suburb: 'Griffith', access_notes: null, site_visit_date: null, consult_date: null,
-      pack_date: null, install_date: null, hire_weeks: 6, collection_date: null, unpack_date: null,
+      pack_date: null, install_date: null, hire_weeks: 6, hire_end_date: null, collection_date: null, unpack_date: null,
       notes: null, created_at: nowISO(), updated_at: nowISO(), ...o,
     }
     db.jobs.push(r)
@@ -120,7 +120,7 @@ function seed() {
 function hold(j) {
   const start = j.pack_date || j.install_date
   if (!start) return null
-  let end = j.unpack_date || j.collection_date ||
+  let end = j.unpack_date || j.collection_date || j.hire_end_date ||
     (j.install_date ? addDays(j.install_date, j.hire_weeks * 7) : addDays(j.pack_date, j.hire_weeks * 7))
   if (end < start) end = start
   return [start, end]

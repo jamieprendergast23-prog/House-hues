@@ -399,3 +399,30 @@ input, select, textarea { border-radius: 4px; }
 .tile-code.long { font-size: 1rem; letter-spacing: .06em; line-height: 1.35; }
 .item-title { text-transform: none; letter-spacing: .02em; font-family: var(--sans); font-weight: 400; font-size: 1.7rem; }
 .tile-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-weight: 500; line-height: 1.3; }
+
+/* ---- hire card (her cork-board card) ---- */
+.hire-card { border: 1.5px solid var(--ink); padding: 14px 16px; margin: 6px 0 12px; font-size: .95rem; line-height: 1.6; background: #fff; }
+.hire-card span { color: var(--muted); }
+@media print {
+  body.printing-card * { visibility: hidden; }
+  body.printing-card .hire-card, body.printing-card .hire-card * { visibility: visible; }
+  body.printing-card .hire-card { position: absolute; left: 15mm; top: 15mm; width: 120mm; font-size: 11pt; color: #000; }
+  body.printing-card .hire-card span { color: #000; }
+}
+
+/* ---- houses board ---- */
+.main:has(.houses-page) { max-width: 1280px; }
+.board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .board { grid-template-columns: 1fr; } }
+.board-col { background: #ebe7e1; border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 120px; }
+.board-h { font-family: var(--serif); font-weight: 300; text-transform: uppercase; letter-spacing: .1em; font-size: .95rem; margin: 0 0 4px; display: flex; justify-content: space-between; }
+.board-h span { color: var(--muted); }
+.house-card { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; color: var(--ink); }
+.house-card:active { transform: scale(.99); }
+.house-card.urgent { border-left: 4px solid var(--warn); }
+.hc-addr { font-weight: 600; margin-bottom: 2px; }
+.hc-line { display: flex; justify-content: space-between; gap: 6px; font-size: .9rem; }
+.hc-line b { font-weight: 500; }
+.hc-sub { font-size: .82rem; color: var(--muted); margin-bottom: 4px; }
+.house-card .pill { margin-top: 4px; }
