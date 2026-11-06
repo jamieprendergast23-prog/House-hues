@@ -327,3 +327,5 @@ a.list-row:active, label.list-row:active { background: var(--accent-soft); }
 .tbl tbody tr:active { background: var(--accent-soft); }
 .tbl th:not(:first-child), .tbl td:not(:first-child) { text-align: right; }
 .tbl-wrap .tbl th, .tbl-wrap .tbl td { text-align: left; white-space: nowrap; }
+.progress i.indeterminate { width: 35%; animation: indet 1.2s ease-in-out infinite; }
+@keyframes indet { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
