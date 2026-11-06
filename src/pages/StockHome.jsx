@@ -18,7 +18,9 @@ export default function StockHome() {
       fetchAll(() => supabase.from('item_costs').select('item_id, purchase_cost, replacement_value').order('item_id')).then((data) => ({ data })),
       supabase.from('jobs').select('id, property_address, status, pack_date, install_date, job_items(count)')
         .eq('type', 'staging').not('status', 'in', '(cancelled,complete)'),
-    ]).then(([i, c, j]) => setD({ items: i.data || [], costs: c.data || [], jobs: j.data || [] }))
+      supabase.from('job_items').select('id, missing_at, items(id, code, sku, name, photo_url), jobs(id, property_address)')
+        .not('missing_at', 'is', null).is('returned_at', null),
+    ]).then(([i, c, j, m]) => setD({ items: i.data || [], costs: c.data || [], jobs: j.data || [], missing: m.data || [] }))
   }, [])
 
   const s = useMemo(() => {
@@ -64,7 +66,7 @@ export default function StockHome() {
         <button className="quick-btn primary" onClick={() => setScan(true)}><span>⌗</span>Scan</button>
         <Link className="quick-btn" to="/inventory/new"><span>＋</span>Add item</Link>
         <Link className="quick-btn" to="/import"><span>⇪</span>Import list</Link>
-        <Link className="quick-btn" to="/inventory"><span>▦</span>All stock</Link>
+        <Link className="quick-btn" to="/results"><span>↗</span>Results</Link>
       </div>
 
       <div className="stats">
@@ -137,6 +139,22 @@ export default function StockHome() {
               </Link></li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {d.missing.length > 0 && (
+        <section className="card highlight">
+          <h2>Missing after pack-up <span className="muted small">{d.missing.length}</span></h2>
+          <ul className="list">
+            {d.missing.map((m) => (
+              <li key={m.id}><Link className="list-row" to={`/inventory/${m.items.id}`}>
+                <Thumb url={m.items.photo_url} size={44} />
+                <div className="grow"><div className="row-title">{m.items.name}</div>
+                  <div className="row-sub">{[m.items.sku, m.items.code].filter(Boolean).join(' · ')} · left at {m.jobs?.property_address}</div></div>
+              </Link></li>
+            ))}
+          </ul>
+          <p className="small muted">Once found, scan it back in on that house’s Unpack list.</p>
         </section>
       )}
 

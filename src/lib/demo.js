@@ -104,6 +104,11 @@ function seed() {
   const f = job({ status: 'booked', client_id: tom.id, property_address: '22 Yambil St', site_visit_date: d(3), pack_date: d(9), install_date: d(10) }, { quote_amount: 3800 })
   assign(f, ['HH-0010', 'HH-0015', 'HH-0016'], 'Dining')
   assign(f, ['HH-0030', 'HH-0031'], 'Living')
+  for (const [addr, inst, listed, sold, guide, sale, ag] of [
+    ['18 Kooba St', d(-120), d(-118), d(-96), 520000, 545000, 'Sarah, Riverina Realty'],
+    ['42 Binya St', d(-90), d(-88), d(-61), 610000, 628000, 'Tom, Banna Property Co'],
+    ['7 Merrill St', d(-70), d(-69), d(-40), 455000, 452000, 'Sarah, Riverina Realty'],
+  ]) job({ status: 'complete', client_id: sarah.id, property_address: addr, install_date: inst, listed_date: listed, sold_date: sold, guide_price: guide, sale_price: sale, agent_name: ag }, { paid_in_full_on: inst })
   job({ type: 'consult', status: 'consult_booked', client_id: mel.id, property_address: '51 Jondaryan Ave', consult_date: d(2) }, { quote_amount: 250, paid_in_full_on: d(-1) })
 
   db.booking_requests.push(
@@ -204,7 +209,11 @@ class Query {
   eq(c, v) { this.filters.push((r) => r[c] === v); return this }
   neq(c, v) { this.filters.push((r) => r[c] !== v); return this }
   in(c, vs) { this.filters.push((r) => vs.includes(r[c])); return this }
-  not(c, op, v) { const vs = v.replace(/[()]/g, '').split(','); this.filters.push((r) => !vs.includes(r[c])); return this }
+  not(c, op, v) {
+    if (op === 'is') { this.filters.push((r) => r[c] != null); return this }
+    const vs = v.replace(/[()]/g, '').split(','); this.filters.push((r) => !vs.includes(r[c])); return this
+  }
+  is(c) { this.filters.push((r) => r[c] == null); return this }
   ilike(c, v) { const s = v.toLowerCase(); this.filters.push((r) => (r[c] || '').toLowerCase() === s); return this }
   order(c, o = {}) { this.orders.push([c, o.ascending !== false, o.nullsFirst]); return this }
   limit(n) { this.lim = n; return this }
@@ -363,6 +372,34 @@ const RPC = {
     if (p_condition === 'needs_repair') i.status = 'repair'
     db.item_events.push({ id: uid(), item_id: p_item_id, kind: 'damage', severity: p_condition, note: p_note?.trim() || null, photo_url: p_photo || null, created_by: session?.user.id, created_at: nowISO() })
     return null
+  },
+  scan_load({ p_job_id, p_code }) {
+    const it = byCode(p_code)
+    if (!it) return { result: 'unknown_code' }
+    const ji = db.job_items.find((x) => x.job_id === p_job_id && x.item_id === it.id && !x.returned_at)
+    if (!ji) {
+      const o = db.job_items.find((x) => x.item_id === it.id && x.packed_at && !x.returned_at)
+      return { result: 'not_from_here', name: it.name, code: it.code, sku: it.sku, other: o && db.jobs.find((j) => j.id === o.job_id)?.property_address }
+    }
+    if (ji.loaded_at) return { result: 'already', name: it.name, code: it.code, sku: it.sku, room: ji.room }
+    ji.loaded_at = nowISO(); ji.missing_at = null
+    return { result: 'loaded', name: it.name, code: it.code, sku: it.sku, room: ji.room }
+  },
+  set_loaded({ p_job_item_id, p_loaded }) {
+    const x = db.job_items.find((r) => r.id === p_job_item_id)
+    x.loaded_at = p_loaded ? (x.loaded_at || nowISO()) : null
+    if (p_loaded) x.missing_at = null
+    return null
+  },
+  finish_pack_up({ p_job_id, p_note }) {
+    const j = db.jobs.find((r) => r.id === p_job_id)
+    const miss = db.job_items.filter((x) => x.job_id === p_job_id && x.packed_at && !x.returned_at && !x.loaded_at)
+    for (const m of miss) {
+      m.missing_at = nowISO()
+      db.item_events.push({ id: uid(), item_id: m.item_id, kind: 'note', note: `Missing at pack-up from ${j.property_address}${p_note?.trim() ? `. ${p_note.trim()}` : ''}`, created_by: session?.user.id, created_at: nowISO() })
+    }
+    if (!['complete', 'cancelled'].includes(j.status)) j.status = 'collected'
+    return { missing: miss.length }
   },
   add_item_note({ p_item_id, p_note, p_photo }) {
     db.item_events.push({ id: uid(), item_id: p_item_id, kind: 'note', note: p_note?.trim() || null, photo_url: p_photo || null, created_by: session?.user.id, created_at: nowISO() })

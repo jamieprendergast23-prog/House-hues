@@ -47,7 +47,7 @@ export default function JobRooms({ jobId, lines, canAddFurniture, onAddFurniture
       } catch (e) { toast(friendlyError(e), 'error') }
     }
     setBusy('')
-    if (ok) toast(`${ok} ${kind === 'design' ? 'design' : 'site'} photo${ok > 1 ? 's' : ''} added to ${room}`)
+    if (ok) toast(`${ok} photo${ok > 1 ? 's' : ''} added to ${room}`)
     load()
   }
 
@@ -71,14 +71,14 @@ export default function JobRooms({ jobId, lines, canAddFurniture, onAddFurniture
       <div className="photo-strip">
         {list.map((p, i) => (
           <div key={p.id} className="ps-item">
-            <button type="button" className="ps-img" onClick={() => setViewer({ photos: list.map((x) => ({ url: x.url, label: `${room} · ${kind === 'design' ? 'design' : 'site'}` })), start: i })}>
+            <button type="button" className="ps-img" onClick={() => setViewer({ photos: list.map((x) => ({ url: x.url, label: `${room} · ${kind === 'design' ? 'design' : kind === 'after' ? 'styled' : 'before'}` })), start: i })}>
               <img src={p.url} alt="" loading="lazy" />
             </button>
             <button type="button" className="ps-del" onClick={() => removePhoto(p)} aria-label="Remove photo">✕</button>
           </div>
         ))}
         <label className={`ps-add ${busy === key ? 'busy' : ''}`}>
-          {busy === key ? 'Uploading…' : kind === 'design' ? '+ Design' : '+ Site photo'}
+          {busy === key ? 'Uploading…' : kind === 'design' ? '+ Design' : kind === 'after' ? '+ After photo' : '+ Site photo'}
           <input type="file" accept="image/*" multiple hidden onChange={(e) => { const f = [...e.target.files]; e.target.value = ''; upload(room, kind, f) }} />
         </label>
       </div>
@@ -114,7 +114,8 @@ export default function JobRooms({ jobId, lines, canAddFurniture, onAddFurniture
             <h3 className="room">{room} <span className="muted small">{ls.length} pieces</span></h3>
             <div className="room-photos">
               <div><div className="field-label">Design</div>{strip(room, 'design')}</div>
-              <div><div className="field-label">Site photos</div>{strip(room, 'site')}</div>
+              <div><div className="field-label">Site photos (before)</div>{strip(room, 'site')}</div>
+              <div><div className="field-label">Styled photos (after)</div>{strip(room, 'after')}</div>
             </div>
             {ls.length > 0 && (
               <ul className="list">

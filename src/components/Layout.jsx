@@ -40,6 +40,7 @@ export default function Layout({ children }) {
               {label}{to === '/requests' && newCount > 0 && <b className="badge">{newCount}</b>}
             </NavLink>
           ))}
+          {!ERP && <NavLink to="/results">Results</NavLink>}
           <NavLink to="/team">Team</NavLink>
         </nav>
         <div className="topbar-actions">

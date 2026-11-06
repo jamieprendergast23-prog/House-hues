@@ -14,6 +14,7 @@ export default function Houses() {
   const [dateFor, setDateFor] = useState(null) // job being given a pack-up date
   const [date, setDate] = useState('')
   const [busy, setBusy] = useState(false)
+  const [soldFor, setSoldFor] = useState(null) // { j, sold_date, sale_price, guide_price, agent_name }
 
   const load = useCallback(() => {
     supabase.from('jobs').select('*, clients(name), job_finance(*), job_items(count)')
@@ -57,6 +58,25 @@ export default function Houses() {
     load()
   }
 
+  const askSold = (j) => {
+    setSheet(null)
+    setSoldFor({ j, sold_date: j.sold_date || t, sale_price: j.sale_price ?? '', guide_price: j.guide_price ?? '', agent_name: j.agent_name || '', listed_date: j.listed_date || '' })
+  }
+  const saveSold = async () => {
+    const { j, ...f } = soldFor
+    setBusy(true)
+    const { error } = await supabase.from('jobs').update({
+      sold_date: f.sold_date || null, sale_price: f.sale_price || null, guide_price: f.guide_price || null,
+      agent_name: f.agent_name || null, listed_date: f.listed_date || null,
+    }).eq('id', j.id)
+    setBusy(false)
+    if (error) return toast(friendlyError(error), 'error')
+    toast('Sale recorded. Added to your Results.')
+    setSoldFor(null)
+    load()
+    if (!j.collection_date) askDate({ ...j, sold_date: f.sold_date })
+  }
+
   const askDate = (j) => {
     setSheet(null)
     setDate(j.collection_date || (hireEnd(j) && hireEnd(j) >= t ? hireEnd(j) : t))
@@ -81,7 +101,7 @@ export default function Houses() {
             return (
               <Card key={j.id} j={j} urgent={d !== null && d <= 7} onClick={() => setSheet({ j, col: 'out' })}>
                 <div className="hc-line"><b>Ends {fmtDate(j.end)}</b> <span className={d <= 7 ? 'warn-text' : 'muted'}>{d < 0 ? `${-d}d over` : d === 0 ? 'today' : `${d} days`}</span></div>
-                <div className="hc-sub">Installed {fmtDate(j.install_date)} · {j.hire_weeks} wks</div>
+                <div className="hc-sub">Installed {fmtDate(j.install_date)} · {j.hire_weeks} wks{j.sold_date ? ` · SOLD ${fmtDate(j.sold_date)}` : ''}</div>
                 <Pay j={j} />
               </Card>
             )
@@ -138,6 +158,7 @@ export default function Houses() {
               <>
                 <p className="muted small">Hire ends {fmtLong(hireEnd(sheet.j))}</p>
                 <button className="btn btn-primary btn-big btn-block" onClick={() => askDate(sheet.j)}>Move to pack up</button>
+                <button className="btn btn-big btn-block" onClick={() => askSold(sheet.j)}>{sheet.j.sold_date ? `Sold ${fmtDate(sheet.j.sold_date)} · edit` : 'Property sold'}</button>
               </>
             )}
             {sheet.col === 'collect' && (
@@ -145,6 +166,7 @@ export default function Houses() {
                 <p className="muted small">Pack up {fmtLong(sheet.j.collection_date)}</p>
                 <button className="btn btn-primary btn-big btn-block" onClick={() => nav(`/pick/${sheet.j.id}`)}>Open pick list</button>
                 <button className="btn btn-big btn-block" onClick={() => askDate(sheet.j)}>Change pack-up date</button>
+                <button className="btn btn-big btn-block" onClick={() => askSold(sheet.j)}>{sheet.j.sold_date ? `Sold ${fmtDate(sheet.j.sold_date)} · edit` : 'Property sold'}</button>
                 <button className="btn btn-big btn-block" disabled={busy} onClick={() => update(sheet.j, { status: 'collected' }, 'Marked collected')}>Mark collected</button>
                 <button className="btn btn-ghost btn-block" disabled={busy} onClick={() => update(sheet.j, { collection_date: null }, 'Pack-up removed, back to out')}>Cancel pack-up</button>
               </>
@@ -156,6 +178,27 @@ export default function Houses() {
               <button className="btn btn-big btn-block" disabled={busy} onClick={() => update(sheet.j, { status: 'complete' }, 'Back in shed, all done')}>Mark unpacked & done</button>
             )}
             <button className="btn btn-big btn-block" onClick={() => nav(`/jobs/${sheet.j.id}`)}>View house details</button>
+          </div>
+        </Modal>
+      )}
+
+      {soldFor && (
+        <Modal title="Property sold 🎉" onClose={() => setSoldFor(null)}>
+          <div className="stack">
+            <p><strong>{soldFor.j.property_address}</strong><br /><span className="muted small">This builds your results sheet for agents.</span></p>
+            <div className="grid2">
+              <Field label="Sold (unconditional)"><input type="date" value={soldFor.sold_date} onChange={(e) => setSoldFor({ ...soldFor, sold_date: e.target.value })} /></Field>
+              <Field label="Listed (optional)" hint="Blank = install date"><input type="date" value={soldFor.listed_date} onChange={(e) => setSoldFor({ ...soldFor, listed_date: e.target.value })} /></Field>
+              <Field label="Sale price ($)"><input type="number" inputMode="numeric" value={soldFor.sale_price} onChange={(e) => setSoldFor({ ...soldFor, sale_price: e.target.value })} /></Field>
+              <Field label="Price guide ($)"><input type="number" inputMode="numeric" value={soldFor.guide_price} onChange={(e) => setSoldFor({ ...soldFor, guide_price: e.target.value })} /></Field>
+            </div>
+            <Field label="Listing agent"><input value={soldFor.agent_name} onChange={(e) => setSoldFor({ ...soldFor, agent_name: e.target.value })} placeholder="e.g. Tom, Riverina Realty" /></Field>
+            <div className="row">
+              <button className="btn btn-ghost" onClick={() => setSoldFor(null)}>Cancel</button>
+              <button className="btn btn-primary grow btn-big" disabled={busy || !soldFor.sold_date} onClick={saveSold}>
+                Save{soldFor.j.collection_date ? '' : ' & book pack up'}
+              </button>
+            </div>
           </div>
         </Modal>
       )}

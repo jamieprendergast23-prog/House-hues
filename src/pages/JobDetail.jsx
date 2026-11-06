@@ -237,6 +237,20 @@ export default function JobDetail() {
         )}
       </section>
 
+      {PLANNER && job.type === 'staging' && !isNew && (
+        <section className="card">
+          <h2>Sale results <span className="muted small">for your results sheet</span></h2>
+          <div className="grid2">
+            <Field label="Listing agent"><input value={job.agent_name || ''} onChange={set('agent_name')} placeholder="e.g. Tom, Riverina Realty" /></Field>
+            <Field label="Listed (first open / online)"><input type="date" value={job.listed_date || ''} onChange={set('listed_date')} /></Field>
+            <Field label="Sold (unconditional)"><input type="date" value={job.sold_date || ''} onChange={set('sold_date')} /></Field>
+            <Field label="Price guide ($)"><input type="number" inputMode="numeric" value={job.guide_price ?? ''} onChange={set('guide_price')} placeholder="650000" /></Field>
+            <Field label="Sale price ($)"><input type="number" inputMode="numeric" value={job.sale_price ?? ''} onChange={set('sale_price')} /></Field>
+          </div>
+          <ResultLine job={job} />
+        </section>
+      )}
+
       {!ERP && PLANNER && (
         <section className="card">
           <h2>Payment</h2>
@@ -428,5 +442,18 @@ House & Hues`
         <button type="button" className="btn" onClick={() => { navigator.clipboard.writeText(body); toast('Copied') }}>Copy</button>
       </div>
     </section>
+  )
+}
+
+function ResultLine({ job }) {
+  const start = job.listed_date || job.install_date
+  const dom = start && job.sold_date ? Math.round((new Date(job.sold_date) - new Date(start)) / 86400000) : null
+  const pct = job.guide_price && job.sale_price ? ((job.sale_price - job.guide_price) / job.guide_price) * 100 : null
+  if (dom === null && pct === null) return <p className="small muted">Fill in the sold date and prices once it sells. They go into the Results page you can show agents.</p>
+  return (
+    <div className="result-line">
+      {dom !== null && <span><b>{dom}</b> days on market</span>}
+      {pct !== null && <span className={pct >= 0 ? 'ok-text' : 'warn-text'}><b>{pct >= 0 ? '+' : ''}{pct.toFixed(1)}%</b> vs guide</span>}
+    </div>
   )
 }
