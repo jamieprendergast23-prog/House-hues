@@ -73,3 +73,16 @@ export function Modal({ title, onClose, children }) {
     </div>
   )
 }
+
+const asset = (f) => `${import.meta.env.BASE_URL}${f}`
+
+/** Logo: small = mark + wordmark for top bars, large = full logo */
+export function Brand({ large }) {
+  if (large) return <img className="brand-logo" src={asset('logo.png')} alt="House & Hues, interior design service" />
+  return (
+    <span className="brand">
+      <img src={asset('logo-mark.png')} alt="" />
+      <span>HOUSE&amp;HUES</span>
+    </span>
+  )
+}

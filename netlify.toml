@@ -3,6 +3,13 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Public Supabase settings (safe to commit: data is protected by row level security).
+# The secret service_role key is NOT here: add SUPABASE_SERVICE_ROLE_KEY in Netlify's UI.
+[build.environment]
+  VITE_SUPABASE_URL = "https://dcdewpoigyadxaawmvqg.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjZGV3cG9pZ3lhZHhhYXdtdnFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM5NTQ3ODQsImV4cCI6MjEwOTUzMDc4NH0.ok0EeB4vYXtvJbTZGP1tDMLB7Pi5qeSGwL9W19pR3l4"
+  SUPABASE_URL = "https://dcdewpoigyadxaawmvqg.supabase.co"
+
 [functions]
   node_bundler = "esbuild"
 

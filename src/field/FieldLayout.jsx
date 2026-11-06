@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { toast } from '../lib/toast'
-import { Modal } from '../components/ui'
+import { Modal, Brand } from '../components/ui'
 
 export default function FieldLayout({ children }) {
   const { isAdmin, setFieldMode, profile } = useAuth()
@@ -21,7 +21,7 @@ export default function FieldLayout({ children }) {
   return (
     <div className="app field">
       <header className="field-top">
-        <NavLink to="/" className="brand">House & Hues</NavLink>
+        <NavLink to="/" className="brand-link"><Brand /></NavLink>
         <button className="btn btn-ghost-light" onClick={() => setMenu(true)}>{profile?.full_name?.split(' ')[0] || 'Menu'} ☰</button>
       </header>
       <main className="field-main">{children}</main>

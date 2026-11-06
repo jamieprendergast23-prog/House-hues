@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { supabase, isDemo } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { Brand } from '../components/ui'
 
 export default function Login() {
   const { session } = useAuth()
@@ -32,7 +33,7 @@ export default function Login() {
   return (
     <div className="center-page">
       <form className="card login" onSubmit={submit}>
-        <h1 className="brand brand-lg">House & Hues</h1>
+        <Brand large />
         <p className="muted">Inventory & bookings</p>
         {isDemo && <p className="note small">Demo: any email and password works. Put “crew” in the email to see what crew see.</p>}
         <input type="email" required placeholder="Email" value={email}

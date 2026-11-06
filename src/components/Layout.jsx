@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { ERP } from '../lib/features'
+import { Brand } from './ui'
 
 const NAV = ERP ? [
   ['/', 'Home', '⌂'],
@@ -31,7 +32,7 @@ export default function Layout({ children }) {
   return (
     <div className="app">
       <header className="topbar">
-        <NavLink to="/" className="brand">House & Hues</NavLink>
+        <NavLink to="/" className="brand-link"><Brand /></NavLink>
         <nav className="topnav">
           {NAV.map(([to, label]) => (
             <NavLink key={to} to={to} end={to === '/'}>

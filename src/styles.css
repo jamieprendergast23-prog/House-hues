@@ -1,21 +1,23 @@
 /* House & Hues: mobile-first, big targets, calm palette */
 :root {
-  --bg: #f6f2ec;
-  --card: #fffdf9;
-  --ink: #2b2724;
-  --muted: #7a7068;
-  --line: #e4dcd1;
-  --accent: #9a5b3c;      /* clay */
+  /* House & Hues: charcoal, white, stone */
+  --bg: #f4f2ef;
+  --card: #ffffff;
+  --ink: #1c1c1c;
+  --muted: #7b7670;
+  --line: #e2ded8;
+  --accent: #1c1c1c;
   --accent-ink: #fff;
-  --accent-soft: #f3e6dc;
-  --ok: #4f6b4a;          /* sage */
-  --ok-soft: #e3ebdf;
-  --warn: #b5482f;
-  --warn-soft: #f7e0d8;
+  --accent-soft: #ece8e2;
+  --stone: #b9ad9e;
+  --ok: #5d6b57;
+  --ok-soft: #e6eae2;
+  --warn: #a4523b;
+  --warn-soft: #f3e2dc;
   --radius: 14px;
   --tap: 48px;
-  --serif: 'Cormorant Garamond', Georgia, serif;
-  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --serif: 'Josefin Sans', 'Jost', sans-serif;
+  --sans: 'Jost', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
 
@@ -23,8 +25,9 @@
 html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.45; }
 body { overscroll-behavior-y: none; }
 a { color: var(--accent); text-decoration: none; }
-h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0 0 .4em; line-height: 1.15; }
-h1 { font-size: 1.9rem; }
+h1, h2, h3 { font-family: var(--sans); font-weight: 400; margin: 0 0 .4em; line-height: 1.15; letter-spacing: .01em; }
+h1 { font-family: var(--serif); font-weight: 300; text-transform: uppercase; letter-spacing: .08em; }
+h1 { font-size: 1.6rem; }
 h2 { font-size: 1.35rem; }
 h3 { font-size: 1.1rem; }
 p { margin: .4em 0; }
@@ -329,3 +332,39 @@ a.list-row:active, label.list-row:active { background: var(--accent-soft); }
 .tbl-wrap .tbl th, .tbl-wrap .tbl td { text-align: left; white-space: nowrap; }
 .progress i.indeterminate { width: 35%; animation: indet 1.2s ease-in-out infinite; }
 @keyframes indet { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+
+/* ---- House & Hues brand ---- */
+.brand-link { display: flex; align-items: center; color: var(--ink); }
+.brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--serif); font-weight: 300; font-size: 1.15rem; letter-spacing: .12em; color: inherit; white-space: nowrap; }
+.brand img { height: 34px; width: auto; }
+.brand span { padding-top: 3px; }
+.field-top .brand-link { color: #fff; }
+.field-top .brand img { filter: invert(1); }
+.brand-logo { display: block; width: 100%; max-width: 300px; margin: 0 auto 4px; }
+.book .brand-logo { max-width: 340px; }
+.btn { border-radius: 4px; letter-spacing: .02em; }
+.btn-primary { text-transform: uppercase; letter-spacing: .1em; font-weight: 500; font-size: .92rem; }
+.btn-big.btn-primary { font-size: 1rem; }
+.card, .stat, .quick-btn, .job-tile, .pick, .service, .modal, .cal-cell { border-radius: 6px; }
+input, select, textarea { border-radius: 4px; }
+.chip, .seg, .seg button { border-radius: 4px; }
+.stat b, .big-num, .job-tile-addr { font-family: var(--serif); font-weight: 300; }
+.job-tile-task, .field-h { letter-spacing: .12em; }
+.topbar { border-bottom-color: var(--line); }
+.field-top { background: var(--ink); }
+.big-action { border-radius: 6px; text-transform: uppercase; letter-spacing: .14em; font-weight: 400; font-size: 1.15rem; }
+.quick-btn.primary, .field-tab-scan { text-transform: uppercase; letter-spacing: .1em; }
+.field-tab { border-radius: 6px; }
+.fab { border-radius: 6px; background: var(--stone); color: var(--ink); text-transform: uppercase; letter-spacing: .12em; }
+.pill-accent { background: var(--ink); }
+.pill-out { background: #efe9e1; color: #7a6650; }
+.tag-staging { border-color: var(--ink); color: var(--ink); }
+.step.current { border-color: var(--ink); color: var(--ink); background: var(--accent-soft); }
+.step.current .step-dot { background: var(--ink); }
+.card.highlight { border-color: var(--ink); box-shadow: none; }
+.job-tile.today { border-color: var(--ink); box-shadow: none; }
+.ev-install { background: var(--ink); }
+.ev-pack { background: var(--stone); }
+.demo-bar { background: var(--stone); color: var(--ink); }
+@media (max-width: 480px) { .brand span { font-size: 1rem; letter-spacing: .1em; } .brand img { height: 28px; } }
+@media (max-width: 360px) { .brand span { display: none; } }

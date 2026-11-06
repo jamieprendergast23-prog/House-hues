@@ -1,7 +1,7 @@
 -- House & Hues: inventory, jobs, bookings
 -- Run once in Supabase: SQL Editor > New query > paste > Run.
 
-create extension if not exists btree_gist;
+create extension if not exists btree_gist with schema extensions;
 
 -- ============================================================
 -- USERS & ROLES
@@ -131,7 +131,7 @@ create table jobs (
 );
 
 -- convenience: hire end date
-create function hire_end(j jobs) returns date language sql stable as $$
+create function hire_end(j jobs) returns date language sql stable set search_path = public as $$
   select j.install_date + j.hire_weeks * 7
 $$;
 
@@ -171,7 +171,7 @@ create table job_items (
 create index job_items_job_idx on job_items (job_id);
 
 create function job_items_set_period() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 declare p daterange;
 begin
   select hold_period into p from jobs where id = new.job_id;
@@ -188,7 +188,7 @@ create trigger job_items_period before insert on job_items
 
 -- when job dates move, move the holds too (fails cleanly if that would double-book)
 create function jobs_sync_period() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   new.updated_at := now();
   return new;
@@ -197,7 +197,7 @@ create trigger jobs_touch before update on jobs
   for each row execute function jobs_sync_period();
 
 create function jobs_after_update() returns trigger
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 begin
   if new.hold_period is distinct from old.hold_period and new.hold_period is not null then
     update job_items set period = new.hold_period
@@ -211,7 +211,7 @@ end $$;
 create trigger jobs_after_update after update on jobs
   for each row execute function jobs_after_update();
 
-create function items_touch() returns trigger language plpgsql as $$
+create function items_touch() returns trigger language plpgsql set search_path = public as $$
 begin new.updated_at := now(); return new; end $$;
 create trigger items_touch before update on items
   for each row execute function items_touch();
@@ -270,7 +270,7 @@ left join lateral (
 -- ============================================================
 -- items free for the whole of a job's hold period
 create function available_items(p_job_id uuid)
-returns setof v_items language sql stable security invoker as $$
+returns setof v_items language sql stable security invoker set search_path = public as $$
   select v.* from v_items v
   where v.status = 'available'
     and not exists (select 1 from job_items x where x.job_id = p_job_id and x.item_id = v.id)
@@ -284,7 +284,7 @@ $$;
 -- what would clash if this job's dates changed to p_range
 create function job_date_conflicts(p_job_id uuid, p_range daterange)
 returns table (item_code text, item_name text, other_job int, other_address text)
-language sql stable security invoker as $$
+language sql stable security invoker set search_path = public as $$
   select i.code, i.name, j.job_number, j.property_address
   from job_items mine
   join items i on i.id = mine.item_id
@@ -402,8 +402,7 @@ create policy "admin booking_requests" on booking_requests for all using (is_adm
 insert into storage.buckets (id, name, public) values ('item-photos', 'item-photos', true)
   on conflict (id) do nothing;
 
-create policy "public read item photos" on storage.objects for select
-  using (bucket_id = 'item-photos');
+-- bucket is public, so photo URLs work without a select policy (and nobody can list the bucket)
 create policy "admin upload item photos" on storage.objects for insert
   with check (bucket_id = 'item-photos' and is_admin());
 create policy "admin update item photos" on storage.objects for update

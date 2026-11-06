@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#2b2724"/>
-  <path d="M256 104 112 220v188h288V220z" fill="none" stroke="#f6f2ec" stroke-width="22" stroke-linejoin="round"/>
-  <text x="256" y="372" text-anchor="middle" font-family="Georgia, serif" font-size="150" font-weight="700" fill="#c9875f">H</text>
-</svg>

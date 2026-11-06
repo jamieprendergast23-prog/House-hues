@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { today } from '../lib/format'
+import { Brand } from '../components/ui'
 import { isDemo } from '../lib/supabase'
 import { demoBookingRequest } from '../lib/demo'
 
@@ -36,7 +37,7 @@ export default function Book() {
     return (
       <div className="center-page public">
         <div className="card">
-          <h1 className="brand brand-lg">House & Hues</h1>
+          <Brand large />
           <h2>Thanks {f.name.split(' ')[0]}!</h2>
           <p>Your request for {f.property_address} has come through. I’ll be in touch shortly to confirm details and a time.</p>
         </div>
@@ -47,7 +48,7 @@ export default function Book() {
   return (
     <div className="public">
       <form className="book" onSubmit={submit}>
-        <h1 className="brand brand-lg">House & Hues</h1>
+        <Brand large />
         <p className="muted">Request staging, a consult or design. I’ll come back to you to confirm.</p>
 
         <fieldset>

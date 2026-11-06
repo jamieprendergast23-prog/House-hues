@@ -86,7 +86,7 @@ function NotConfigured() {
   return (
     <div className="center-page">
       <div className="card">
-        <h1 className="brand">House & Hues</h1>
+        <h1>House &amp; Hues</h1>
         <p>Supabase isn’t connected yet. Set <code>VITE_SUPABASE_URL</code> and{' '}
           <code>VITE_SUPABASE_ANON_KEY</code> in a <code>.env</code> file (local) or in
           Netlify &gt; Site settings &gt; Environment variables, then redeploy.</p>
