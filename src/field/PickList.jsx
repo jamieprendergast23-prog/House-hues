@@ -5,6 +5,7 @@ import { fmtDate, hireEnd } from '../lib/format'
 import { toast } from '../lib/toast'
 import { Loading, Empty } from '../components/ui'
 import Scanner from '../components/Scanner'
+import PhotoViewer from '../components/PhotoViewer'
 
 export default function PickList() {
   const { jobId } = useParams()
@@ -14,16 +15,20 @@ export default function PickList() {
   const [sort, setSort] = useState('room') // room | shed
   const [scan, setScan] = useState(false)
   const [last, setLast] = useState(null)
+  const [photos, setPhotos] = useState([])
+  const [viewer, setViewer] = useState(null)
 
   const load = useCallback(async () => {
-    const [j, l] = await Promise.all([
+    const [j, l, ph] = await Promise.all([
       supabase.from('jobs').select('*').eq('id', jobId).single(),
       supabase.from('job_items')
         .select('id, room, packed_at, returned_at, items(id, code, sku, name, category, colour, photo_url, shed_location)')
         .eq('job_id', jobId),
+      supabase.from('job_photos').select('*').eq('job_id', jobId).order('created_at'),
     ])
     setJob(j.data)
     setLines(l.data || [])
+    setPhotos(ph.data || [])
     // sensible default: once things are out, you're bringing them back
     setMode((m) => m || (['installed', 'collected'].includes(j.data?.status) ? 'return' : 'pack'))
   }, [jobId])
@@ -40,7 +45,11 @@ export default function PickList() {
     ;(acc[key] ||= []).push(l)
     return acc
   }, {})
+  // rooms with a design but nothing on the list yet still show, so crew can see the look
+  if (sort === 'room') for (const p of photos) if (p.kind === 'design' && !groups[p.room]) groups[p.room] = []
   const groupKeys = Object.keys(groups).sort()
+  const designs = (room) => photos.filter((p) => p.room === room && p.kind === 'design')
+  const sitePhotos = (room) => photos.filter((p) => p.room === room && p.kind === 'site')
 
   const toggle = async (l) => {
     const state = mode === 'pack' ? (l.packed_at ? 'unpacked' : 'packed') : (l.returned_at ? 'unreturned' : 'returned')
@@ -114,6 +123,20 @@ export default function PickList() {
       {groupKeys.map((k) => (
         <section key={k}>
           <h2 className="field-h">{k} <span className="muted">{groups[k].filter(doneOf).length}/{groups[k].length}</span></h2>
+          {sort === 'room' && designs(k).length > 0 && (
+            <div className="pick-designs">
+              {designs(k).map((p, i, arr) => (
+                <button key={p.id} className="pick-design" onClick={() => setViewer({ photos: arr.map((x) => ({ url: x.url, label: `${k} · design` })), start: i })}>
+                  <img src={p.url} alt={`${k} design`} loading="lazy" />
+                </button>
+              ))}
+            </div>
+          )}
+          {sort === 'room' && sitePhotos(k).length > 0 && (
+            <button className="btn btn-small btn-ghost" onClick={() => setViewer({ photos: sitePhotos(k).map((x) => ({ url: x.url, label: `${k} · site photo` })), start: 0 })}>
+              See {sitePhotos(k).length} site photo{sitePhotos(k).length > 1 ? 's' : ''} of the empty room
+            </button>
+          )}
           {groups[k].sort((a, b) => doneOf(a) - doneOf(b)).map((l) => (
             <button key={l.id} className={`pick ${doneOf(l) ? 'done' : ''}`} onClick={() => toggle(l)}>
               {l.items.photo_url ? <img src={l.items.photo_url} alt="" /> : <span className="pick-noimg" />}
@@ -130,6 +153,8 @@ export default function PickList() {
 
       <div className="field-spacer" />
       <button className="fab" onClick={() => { setLast(null); setScan(true) }}>Scan to {mode === 'pack' ? 'pack' : 'return'}</button>
+
+      {viewer && <PhotoViewer photos={viewer.photos} start={viewer.start} onClose={() => setViewer(null)} />}
 
       {scan && (
         <Scanner continuous title={mode === 'pack' ? 'Scan items as you load' : 'Scan items as they come off'}

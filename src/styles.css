@@ -474,3 +474,26 @@ input, select, textarea { border-radius: 4px; }
 .dl-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .dl-head b { font-weight: 500; }
 .damage-log li.dl-note::before { background: var(--stone); }
+
+/* ---- rooms, designs, photo viewer ---- */
+.room-block { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 14px; }
+.room-block > * + * { margin-top: 8px; }
+.room-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 600px) { .room-photos { grid-template-columns: 1fr; } }
+.photo-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.ps-item { position: relative; flex: none; }
+.ps-img { padding: 0; border: 0; background: none; display: block; cursor: zoom-in; }
+.ps-img img { width: 120px; height: 84px; object-fit: cover; border-radius: 4px; display: block; }
+.ps-del { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(0,0,0,.6); color: #fff; font-size: .75rem; cursor: pointer; }
+.ps-add { flex: none; width: 120px; height: 84px; display: grid; place-items: center; border: 1.5px dashed var(--line); border-radius: 4px; color: var(--muted); font-size: .85rem; font-weight: 600; cursor: pointer; }
+.ps-add.busy { opacity: .6; }
+.room-picker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+.room-picker input { width: 180px; min-height: 38px; padding: 6px 10px; }
+.pick-designs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 8px; }
+.pick-design { flex: none; padding: 0; border: 0; background: none; width: 100%; max-width: 520px; cursor: zoom-in; }
+.pick-designs:has(.pick-design + .pick-design) .pick-design { width: 82%; }
+.pick-design img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; display: block; }
+.viewer { position: fixed; inset: 0; z-index: 90; background: rgba(12,12,12,.95); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.viewer-top { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); color: #fff; font-size: .9rem; }
+.viewer img { max-width: 100%; max-height: 82vh; object-fit: contain; }
+.viewer-cap { color: #ddd; padding: 10px 16px; text-align: center; }

@@ -6,6 +6,7 @@ import { fmtDate, fmtLong, hireEnd, money, addDays } from '../lib/format'
 import { toast } from '../lib/toast'
 import { ERP, PLANNER } from '../lib/features'
 import HireCard from '../components/HireCard'
+import JobRooms from '../components/JobRooms'
 import { Field, Modal, Thumb, Loading, TypeTag, JobPill, Empty } from '../components/ui'
 import Scanner from '../components/Scanner'
 
@@ -44,7 +45,7 @@ export default function JobDetail() {
   const loadLines = useCallback(async () => {
     if (isNew) return
     const { data } = await supabase.from('job_items')
-      .select('id, room, packed_at, returned_at, items(id, code, name, category, photo_url, shed_location)')
+      .select('id, room, packed_at, returned_at, items(id, code, sku, name, category, photo_url, shed_location)')
       .eq('job_id', id).order('room')
     setLines(data || [])
   }, [id, isNew])
@@ -138,7 +139,6 @@ export default function JobDetail() {
 
   const end = hireEnd(job)
   const balance = fin.quote_amount ? Number(fin.quote_amount) - (fin.paid_in_full_on ? Number(fin.quote_amount) : fin.deposit_paid_on ? Number(fin.deposit_amount || 0) : 0) : null
-  const byRoom = lines.reduce((acc, l) => ((acc[l.room] ||= []).push(l), acc), {})
   const packedCount = lines.filter((l) => l.packed_at).length
 
   return (
@@ -279,36 +279,11 @@ export default function JobDetail() {
     </form>
 
       {!isNew && job.type === 'staging' && (
-        <section className="card">
-          <div className="row between">
-            <h2>Furniture <span className="muted small">{lines.length} items · {packedCount} packed</span></h2>
-          </div>
-          {!job.pack_date && !job.install_date ? (
-            <p className="note">Add a packing or install date (and save) before adding furniture, so the system can check it’s free.</p>
-          ) : (
-            <div className="row">
-              <button type="button" className="btn btn-primary" onClick={() => setAdding(true)}>+ Add furniture</button>
-              <button type="button" className="btn" onClick={() => nav(`/pick/${id}`)}>Open pick list</button>
-            </div>
-          )}
-          {Object.keys(byRoom).length === 0 ? <Empty>Nothing added yet.</Empty> : Object.entries(byRoom).map(([room, ls]) => (
-            <div key={room}>
-              <h3 className="room">{room} <span className="muted small">{ls.length}</span></h3>
-              <ul className="list">
-                {ls.map((l) => (
-                  <li key={l.id} className="list-row">
-                    <Thumb url={l.items.photo_url} size={44} />
-                    <div className="grow">
-                      <Link to={`/inventory/${l.items.id}`} className="row-title">{l.items.name}</Link>
-                      <div className="row-sub">{l.items.code} · {l.returned_at ? 'Back in shed' : l.packed_at ? 'Packed / out' : `Shed ${l.items.shed_location || '—'}`}</div>
-                    </div>
-                    {!l.packed_at && <button type="button" className="btn btn-ghost btn-small" onClick={() => removeLine(l.id)}>Remove</button>}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </section>
+        <JobRooms jobId={id} lines={lines} packedCount={packedCount}
+          canAddFurniture={Boolean(saved?.pack_date || saved?.install_date)}
+          onAddFurniture={(room) => setAdding(room)}
+          onRemoveLine={removeLine}
+          onOpenPickList={() => nav(`/pick/${id}`)} />
       )}
 
       {!isNew && ERP && <ClientMessage job={job} client={client} />}
@@ -321,7 +296,7 @@ export default function JobDetail() {
         </div>
       )}
 
-      {adding && <AddItems jobId={id} onClose={() => { setAdding(false); loadLines() }} />}
+      {adding && <AddItems jobId={id} initialRoom={typeof adding === 'string' ? adding : undefined} onClose={() => { setAdding(false); loadLines() }} />}
 
       {conflicts && (
         <Modal title="Those dates clash" onClose={() => setConflicts(null)}>
@@ -343,9 +318,9 @@ export default function JobDetail() {
 }
 
 /** Picker that only ever shows items free for this job's dates */
-function AddItems({ jobId, onClose }) {
+function AddItems({ jobId, onClose, initialRoom }) {
   const [items, setItems] = useState(null)
-  const [room, setRoom] = useState(ROOMS[0])
+  const [room, setRoom] = useState(initialRoom || ROOMS[0])
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(new Set())
   const [busy, setBusy] = useState(false)
@@ -387,7 +362,7 @@ function AddItems({ jobId, onClose }) {
     <Modal title="Add furniture" onClose={onClose}>
       <Field label="Room">
         <select value={room} onChange={(e) => setRoom(e.target.value)}>
-          {ROOMS.map((r) => <option key={r}>{r}</option>)}
+          {[...new Set([...(initialRoom ? [initialRoom] : []), ...ROOMS])].map((r) => <option key={r}>{r}</option>)}
         </select>
       </Field>
       <div className="row">

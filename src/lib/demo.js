@@ -47,7 +47,7 @@ const STOCK = [
 function seed() {
   const db = {
     profiles: [ADMIN, CREW], items: [], item_costs: [], clients: [], jobs: [],
-    job_finance: [], job_items: [], booking_requests: [], item_events: [], _itemSeq: 1, _jobSeq: 1001,
+    job_finance: [], job_items: [], booking_requests: [], item_events: [], job_photos: [], _itemSeq: 1, _jobSeq: 1001,
   }
   const skus = {}, perLetter = {}
   const skuFor = (name, cat) => skus[name] ||= `${cat[0]}${(perLetter[cat[0]] = (perLetter[cat[0]] || 0) + 1)}`
