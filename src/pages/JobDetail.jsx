@@ -297,7 +297,8 @@ export default function JobDetail() {
           canAddFurniture={Boolean(saved?.pack_date || saved?.install_date)}
           onAddFurniture={(room) => setAdding(room)}
           onRemoveLine={removeLine}
-          onOpenPickList={() => nav(`/pick/${id}`)} />
+          onOpenPickList={() => nav(`/pick/${id}`)}
+          onLinesChanged={loadLines} />
       )}
 
       {!isNew && ERP && <ClientMessage job={job} client={client} />}

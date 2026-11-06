@@ -532,3 +532,4 @@ button.house-card { width: 100%; text-align: left; font: inherit; cursor: pointe
   .stats { grid-template-columns: repeat(5, 1fr); }
   .result-card, .stat { border-color: #ccc; }
 }
+.di-row { gap: 10px; } .di-row select { max-width: 130px; }

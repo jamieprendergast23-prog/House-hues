@@ -6,6 +6,7 @@ import { compressImage } from '../lib/format'
 import { toast } from '../lib/toast'
 import { Thumb, Empty } from './ui'
 import PhotoViewer from './PhotoViewer'
+import DesignImport from './DesignImport'
 
 const roomOrder = (r) => { const k = ROOMS.indexOf(r); return k < 0 ? 50 : k }
 
@@ -13,12 +14,13 @@ const roomOrder = (r) => { const k = ROOMS.indexOf(r); return k < 0 ? 50 : k }
  * Rooms on a job: site photos, design renders and the furniture for each room.
  * The design renders are what the crew see at the top of each room on the pick list.
  */
-export default function JobRooms({ jobId, lines, canAddFurniture, onAddFurniture, onRemoveLine, onOpenPickList, packedCount }) {
+export default function JobRooms({ jobId, lines, canAddFurniture, onAddFurniture, onRemoveLine, onOpenPickList, packedCount, onLinesChanged }) {
   const [photos, setPhotos] = useState([])
   const [extra, setExtra] = useState([])
   const [busy, setBusy] = useState('')
   const [viewer, setViewer] = useState(null)
   const [newRoom, setNewRoom] = useState(null)
+  const [importing, setImporting] = useState(false)
 
   const load = useCallback(() => {
     supabase.from('job_photos').select('*').eq('job_id', jobId).order('created_at').then(({ data }) => setPhotos(data || []))
@@ -94,6 +96,7 @@ export default function JobRooms({ jobId, lines, canAddFurniture, onAddFurniture
 
       <div className="row">
         <button type="button" className="btn" onClick={() => setNewRoom('')}>+ Add room</button>
+        {canAddFurniture && <button type="button" className="btn btn-primary" onClick={() => setImporting(true)}>Import design list</button>}
         <button type="button" className="btn" onClick={onOpenPickList}>Open pick list</button>
       </div>
       {newRoom !== null && (
@@ -138,6 +141,10 @@ export default function JobRooms({ jobId, lines, canAddFurniture, onAddFurniture
         )
       })}
 
+      {importing && (
+        <DesignImport jobId={jobId} rooms={rooms} onClose={() => setImporting(false)}
+          onDone={() => { setImporting(false); onLinesChanged?.() }} />
+      )}
       {viewer && <PhotoViewer photos={viewer.photos} start={viewer.start} onClose={() => setViewer(null)} />}
     </section>
   )
