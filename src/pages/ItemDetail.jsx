@@ -5,6 +5,7 @@ import { CATEGORIES, CONDITIONS, ITEM_STATUS } from '../lib/constants'
 import { fmtDate, compressImage } from '../lib/format'
 import { toast } from '../lib/toast'
 import { QrImg, Thumb, ItemWhere, Field, Loading, Empty } from '../components/ui'
+import DamagePanel from '../components/DamagePanel'
 
 const BLANK = {
   name: '', sku: '', subcategory: '', category: 'Furniture', colour: '', dimensions: '', description: '',
@@ -226,6 +227,8 @@ export default function ItemDetail({ byCode }) {
         </dl>
         {item.notes && <p className="pre small">{item.notes}</p>}
       </div>
+
+      <DamagePanel item={item} isAdmin onChange={(f) => setItem({ ...item, ...f })} />
 
       <h2>Job history</h2>
       {history.length === 0 ? <Empty>Not used on a job yet.</Empty> : (

@@ -4,13 +4,14 @@ import { supabase, friendlyError } from '../lib/supabase'
 import { fmtDate } from '../lib/format'
 import { toast } from '../lib/toast'
 import { Loading, Empty, ItemWhere, ConditionPill } from '../components/ui'
+import DamagePanel from '../components/DamagePanel'
+import { useAuth } from '../lib/auth'
 
 export default function FieldItem() {
   const { code } = useParams()
+  const { isAdmin } = useAuth()
   const [item, setItem] = useState(undefined)
   const [spot, setSpot] = useState('')
-  const [damage, setDamage] = useState(false)
-  const [note, setNote] = useState('')
 
   const load = useCallback(() => {
     supabase.from('v_items').select('*').eq('code', code.toUpperCase()).maybeSingle()
@@ -28,11 +29,6 @@ export default function FieldItem() {
     load()
   }
 
-  const report = async () => {
-    const { error } = await supabase.rpc('flag_item', { p_item_id: item.id, p_condition: 'needs_repair', p_note: note })
-    if (error) return toast(friendlyError(error), 'error')
-    toast('Reported. Thanks!'); setDamage(false); setNote(''); load()
-  }
 
   return (
     <div className="stack">
@@ -63,18 +59,7 @@ export default function FieldItem() {
         <div className="card"><p>Free. Lives at <strong>{item.shed_location || 'no spot set'}</strong>.</p></div>
       )}
 
-      {damage ? (
-        <div className="card">
-          <label className="field"><span className="field-label">What’s wrong?</span>
-            <textarea rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Stain on left cushion" /></label>
-          <div className="row">
-            <button className="btn btn-ghost" onClick={() => setDamage(false)}>Cancel</button>
-            <button className="btn btn-primary grow btn-big" onClick={report}>Report damage</button>
-          </div>
-        </div>
-      ) : (
-        <button className="btn btn-block btn-big" onClick={() => setDamage(true)}>Report damage</button>
-      )}
+      <DamagePanel item={item} isAdmin={isAdmin} onChange={(f) => setItem({ ...item, ...f })} />
 
       <Link to="/scan" className="btn btn-block btn-big">Scan another</Link>
     </div>

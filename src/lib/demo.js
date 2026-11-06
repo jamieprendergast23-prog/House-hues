@@ -47,7 +47,7 @@ const STOCK = [
 function seed() {
   const db = {
     profiles: [ADMIN, CREW], items: [], item_costs: [], clients: [], jobs: [],
-    job_finance: [], job_items: [], booking_requests: [], _itemSeq: 1, _jobSeq: 1001,
+    job_finance: [], job_items: [], booking_requests: [], item_events: [], _itemSeq: 1, _jobSeq: 1001,
   }
   const skus = {}, perLetter = {}
   const skuFor = (name, cat) => skus[name] ||= `${cat[0]}${(perLetter[cat[0]] = (perLetter[cat[0]] || 0) + 1)}`
@@ -59,6 +59,7 @@ function seed() {
       status: i === 5 ? 'repair' : 'available', photo_url: null,
       notes: i === 5 ? 'Broken weave on left arm' : null, created_at: nowISO(), updated_at: nowISO(),
     })
+    if (i === 5) db.item_events.push({ id: uid(), item_id: id, kind: 'damage', severity: 'needs_repair', note: 'Broken weave on left arm', photo_url: null, created_by: CREW.id, created_at: nowISO() })
     db.item_costs.push({ item_id: id, purchase_cost: 80 + ((i * 37) % 900), replacement_value: 120 + ((i * 53) % 1200) })
   })
   const c = (name, agency, email, phone) => { const r = { id: uid(), name, agency, email, phone, kind: agency ? 'agent' : 'homeowner', created_at: nowISO() }; db.clients.push(r); return r }
@@ -179,6 +180,7 @@ function embed(table, row, name, sub) {
       return sub.trim() === 'count' ? [{ count: ls.length }] : ls.map(clone)
     }
   }
+  if (table === 'item_events' && name === 'profiles') return clone(db.profiles.find((p) => p.id === row.created_by))
   if (table === 'job_items') {
     if (name === 'items') return clone(db.items.find((i) => i.id === row.item_id))
     if (name === 'jobs') return clone(db.jobs.find((j) => j.id === row.job_id))
@@ -355,11 +357,18 @@ const RPC = {
     if (p_state === 'unreturned') x.returned_at = null
     return null
   },
-  flag_item({ p_item_id, p_condition, p_note }) {
+  flag_item({ p_item_id, p_condition, p_note, p_photo }) {
     const i = db.items.find((r) => r.id === p_item_id)
     i.condition = p_condition
     if (p_condition === 'needs_repair') i.status = 'repair'
-    if (p_note?.trim()) i.notes = [i.notes, `${new Date().toLocaleDateString('en-AU', { day: '2-digit', month: 'short' })}: ${p_note.trim()}`].filter(Boolean).join('\n')
+    db.item_events.push({ id: uid(), item_id: p_item_id, kind: 'damage', severity: p_condition, note: p_note?.trim() || null, photo_url: p_photo || null, created_by: session?.user.id, created_at: nowISO() })
+    return null
+  },
+  mark_repaired({ p_item_id, p_note }) {
+    const i = db.items.find((r) => r.id === p_item_id)
+    i.condition = 'good'
+    if (i.status === 'repair') i.status = 'available'
+    db.item_events.push({ id: uid(), item_id: p_item_id, kind: 'repaired', note: p_note?.trim() || null, created_by: session?.user.id, created_at: nowISO() })
     return null
   },
 }

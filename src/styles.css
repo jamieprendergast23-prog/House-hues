@@ -462,3 +462,14 @@ input, select, textarea { border-radius: 4px; }
   .stock-page .toolbar .btn { flex: none; }
 }
 .view-toggle button { white-space: nowrap; }
+
+/* ---- damage & repairs ---- */
+.card.damage.is-out { border-left: 4px solid var(--warn); }
+.card.damage.is-minor { border-left: 4px solid var(--stone); }
+.damage-thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 4px; border: 1px solid var(--line); display: block; margin-top: 6px; }
+.damage-log { list-style: none; margin: 14px 0 0; padding: 0; border-top: 1px solid var(--line); }
+.damage-log li { padding: 10px 0 10px 14px; border-bottom: 1px solid var(--line); position: relative; }
+.damage-log li::before { content: ''; position: absolute; left: 0; top: 16px; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+.damage-log li.dl-repaired::before { background: var(--ok); }
+.dl-head { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.dl-head b { font-weight: 500; }
