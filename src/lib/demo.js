@@ -47,7 +47,7 @@ const STOCK = [
 function seed() {
   const db = {
     profiles: [ADMIN, CREW], items: [], item_costs: [], clients: [], jobs: [],
-    job_finance: [], job_items: [], booking_requests: [], item_events: [], job_photos: [], _itemSeq: 1, _jobSeq: 1001,
+    job_finance: [], job_items: [], booking_requests: [], item_events: [], job_photos: [], reminders: [], _itemSeq: 1, _jobSeq: 1001,
   }
   const skus = {}, perLetter = {}
   const skuFor = (name, cat) => skus[name] ||= `${cat[0]}${(perLetter[cat[0]] = (perLetter[cat[0]] || 0) + 1)}`
@@ -119,6 +119,12 @@ function seed() {
       property_address: '4 Calabria Rd', suburb: 'Hanwood', service_type: 'consult', preferred_date: d(5), property_type: 'House', bedrooms: 4,
       occupied: true, message: 'Want to restyle before selling.', status: 'new', job_id: null },
   )
+  // a few reminders so the calendar shows them
+  const js = db.jobs.filter((j) => j.install_date)
+  const rem = (j, off, title) => db.reminders.push({ id: uid(), job_id: j.id, due_date: addDays(j.install_date, off), title, note: null, done_at: null, created_at: nowISO() })
+  if (js[0]) rem(js[0], -2, 'Call agent to confirm access')
+  if (js[1]) rem(js[1], -1, 'Check lockbox code')
+  if (js[2]) rem(js[2], 35, 'Ask agent about extending hire')
   return db
 }
 
@@ -185,6 +191,7 @@ function embed(table, row, name, sub) {
       return sub.trim() === 'count' ? [{ count: ls.length }] : ls.map(clone)
     }
   }
+  if (table === 'reminders' && name === 'jobs') return clone(db.jobs.find((j) => j.id === row.job_id))
   if (table === 'item_events' && name === 'profiles') return clone(db.profiles.find((p) => p.id === row.created_by))
   if (table === 'job_items') {
     if (name === 'items') return clone(db.items.find((i) => i.id === row.item_id))

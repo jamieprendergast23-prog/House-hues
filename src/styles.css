@@ -595,3 +595,13 @@ button.house-card { width: 100%; text-align: left; font: inherit; cursor: pointe
   .wd-head b { font-size: 1.15rem; }
   .wd-empty { flex: 1; text-align: left; }
 }
+
+/* reminders */
+.ev-remind { background: #c4962e; }
+.cal-ev.ev-remind.is-done, .wd-ev.ev-remind.is-done { opacity: .45; text-decoration: line-through; }
+.wd-ev.ev-remind { display: flex; flex-direction: column; cursor: pointer; }
+.wd-ev.ev-remind input { width: auto; min-height: 0; margin: 0 4px 0 0; vertical-align: middle; }
+.wd-ev.ev-remind .wd-ev-addr { color: inherit; }
+.reminder-list li.done .row-title { text-decoration: line-through; opacity: .55; }
+.reminder-list li.overdue .row-sub { color: var(--danger, #b4483c); font-weight: 600; }
+.reminder-list input[type=checkbox], .note .list-row input[type=checkbox] { width: 22px; height: 22px; min-height: 0; flex: none; }

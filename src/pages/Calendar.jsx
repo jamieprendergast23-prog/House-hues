@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
+import { supabase, friendlyError } from '../lib/supabase'
+import { toast } from '../lib/toast'
 import { EVENT_KINDS } from '../lib/constants'
 import { toISO, today, hireEnd, parseDate, addDays } from '../lib/format'
 import { Loading, TypeTag } from '../components/ui'
@@ -23,12 +24,26 @@ export default function CalendarPage() {
   const [jobs, setJobs] = useState(null)
   const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
   const [day, setDay] = useState(today())
+  const [reminders, setReminders] = useState([])
 
+  const loadReminders = () => supabase.from('reminders').select('*, jobs(id, property_address, type, status)').order('due_date')
+    .then(({ data }) => setReminders((data || []).filter((r) => r.jobs && r.jobs.status !== 'cancelled')))
   useEffect(() => {
     supabase.from('jobs').select('*, clients(name)').neq('status', 'cancelled').then(({ data }) => setJobs(data || []))
+    loadReminders()
   }, [])
 
-  const events = useMemo(() => jobEvents(jobs || []), [jobs])
+  const tick = async (r) => {
+    const { error } = await supabase.from('reminders').update({ done_at: r.done_at ? null : new Date().toISOString() }).eq('id', r.id)
+    if (error) return toast(friendlyError(error), 'error')
+    loadReminders()
+  }
+
+  const events = useMemo(() => [
+    ...jobEvents(jobs || []),
+    ...reminders.map((r) => ({ date: r.due_date, kind: 'reminder', job: r.jobs, reminder: r, label: r.title, cls: `ev-remind${r.done_at ? ' is-done' : ''}` })),
+  ].sort((a, b) => a.date.localeCompare(b.date)), [jobs, reminders])
+  const overdue = reminders.filter((r) => !r.done_at && r.due_date < today())
   const byDate = useMemo(() => events.reduce((a, e) => ((a[e.date] ||= []).push(e), a), {}), [events])
 
   // jobs whose furniture is in a house on a given day
@@ -73,10 +88,24 @@ export default function CalendarPage() {
       </div>
 
       <div className="legend">
-        {['ev-visit', 'ev-pack', 'ev-install', 'ev-end', 'ev-collect'].map((c, i) => (
-          <span key={c}><i className={`dot ${c}`} />{['Visit / consult', 'Pack / unpack', 'Install', 'Hire ends', 'Collection'][i]}</span>
+        {['ev-visit', 'ev-pack', 'ev-install', 'ev-end', 'ev-collect', 'ev-remind'].map((c, i) => (
+          <span key={c}><i className={`dot ${c}`} />{['Visit / consult', 'Pack / unpack', 'Install', 'Hire ends', 'Collection', 'Reminder'][i]}</span>
         ))}
       </div>
+
+      {overdue.length > 0 && (
+        <div className="note small">
+          <b>{overdue.length} overdue reminder{overdue.length > 1 ? 's' : ''}</b>
+          <ul className="list">
+            {overdue.map((r) => (
+              <li key={r.id} className="list-row">
+                <input type="checkbox" checked={false} onChange={() => tick(r)} aria-label="Done" />
+                <Link to={`/jobs/${r.job_id}`} className="grow">{r.title} · {r.jobs.property_address} · {parseDate(r.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="cal">
         {WEEKDAYS.map((w) => <div key={w} className="cal-wd">{w}</div>)}
@@ -116,7 +145,12 @@ export default function CalendarPage() {
                   <span>{d.toLocaleDateString('en-AU', { weekday: 'short' })}</span>
                   <b>{d.getDate()}</b>
                 </div>
-                {evs.length === 0 ? <div className="wd-empty">–</div> : evs.map((e, i) => (
+                {evs.length === 0 ? <div className="wd-empty">–</div> : evs.map((e, i) => e.reminder ? (
+                  <label key={i} className={`wd-ev ${e.cls}`} onClick={(ev) => ev.stopPropagation()}>
+                    <span className="wd-ev-label"><input type="checkbox" checked={Boolean(e.reminder.done_at)} onChange={() => tick(e.reminder)} /> {e.label}</span>
+                    <Link to={`/jobs/${e.job.id}`} className="wd-ev-addr">{e.job.property_address}</Link>
+                  </label>
+                ) : (
                   <Link key={i} to={`/jobs/${e.job.id}`} className={`wd-ev ${e.cls}`}>
                     <span className="wd-ev-label">{e.label}</span>
                     <span className="wd-ev-addr">{e.job.property_address}</span>
