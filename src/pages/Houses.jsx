@@ -5,6 +5,7 @@ import { today, addDays, fmtDate, fmtLong, hireEnd, daysUntil } from '../lib/for
 import { paymentLabel } from '../components/HireCard'
 import { Loading, Modal, Field } from '../components/ui'
 import { toast } from '../lib/toast'
+import StockPicker from '../components/StockPicker'
 
 // Her whiteboard, digital. Houses flow left to right: quote → booked → out → pack up.
 const COLS = [
@@ -32,6 +33,7 @@ export default function Houses() {
   const [soldFor, setSoldFor] = useState(null)
   const [dragId, setDragId] = useState(null)
   const [over, setOver] = useState(null)
+  const [picker, setPicker] = useState(null) // job choosing inventory
 
   const load = useCallback(() => {
     supabase.from('jobs').select('*, clients(name), job_finance(*), job_items(count)')
@@ -81,8 +83,24 @@ export default function Houses() {
     if (col === 'packup') return askDate({ ...j }, 'collection_date')
   }
 
-  const saveDate = () => {
+  // furniture needs the job's dates so only free pieces are offered
+  const selectInventory = (j) => {
+    setSheet(null)
+    if (j.pack_date || j.install_date) return setPicker(j)
+    setDate(t)
+    setDateFor({ j, field: 'pick_dates' })
+  }
+
+  const saveDate = async () => {
     const { j, field } = dateFor
+    if (field === 'pick_dates') {
+      setBusy(true)
+      const { error } = await supabase.from('jobs').update({ install_date: date }).eq('id', j.id)
+      setBusy(false)
+      if (error) return toast(friendlyError(error), 'error')
+      setDateFor(null); load()
+      return setPicker({ ...j, install_date: date })
+    }
     if (field === 'install_date') return update(j, { install_date: date, status: 'installed', collection_date: null }, `Installed ${fmtDate(date)}. Hire ends ${fmtDate(hireEnd({ ...j, install_date: date }))}`)
     return update(j, { collection_date: date, status: j.status === 'collected' ? 'collected' : 'installed' }, `Pack up booked for ${fmtDate(date)}`)
   }
@@ -216,8 +234,14 @@ export default function Houses() {
                 <button className="btn btn-big btn-block" disabled={busy} onClick={() => update(sheet, { status: 'complete' }, 'Back in shed, all done')}>Mark unpacked &amp; done</button>
               </>
             )}
+            {(sheetCol === 'booked' || sheetCol === 'quote') && (
+              <button className="btn btn-primary btn-big btn-block" onClick={() => selectInventory(sheet)}>Select inventory</button>
+            )}
+            {sheetCol === 'out' && (
+              <button className="btn btn-big btn-block" onClick={() => selectInventory(sheet)}>Add inventory</button>
+            )}
             {sheetCol === 'booked' && (
-              <button className="btn btn-primary btn-big btn-block" onClick={() => nav(`/pick/${sheet.id}`)}>Open pick list</button>
+              <button className="btn btn-big btn-block" onClick={() => nav(`/pick/${sheet.id}`)}>Open pick list</button>
             )}
             <button className="btn btn-big btn-block" onClick={() => nav(`/jobs/${sheet.id}`)}>View house details</button>
             <div className="move-row">
@@ -230,6 +254,10 @@ export default function Houses() {
             </div>
           </div>
         </Modal>
+      )}
+
+      {picker && (
+        <StockPicker jobId={picker.id} onClose={() => { setPicker(null); load() }} />
       )}
 
       {soldFor && (
@@ -254,15 +282,17 @@ export default function Houses() {
       )}
 
       {dateFor && (
-        <Modal title={dateFor.field === 'install_date' ? 'When was it installed?' : 'Pick a pack-up date'} onClose={() => setDateFor(null)}>
+        <Modal title={dateFor.field === 'install_date' ? 'When was it installed?' : dateFor.field === 'pick_dates' ? 'When is the install?' : 'Pick a pack-up date'} onClose={() => setDateFor(null)}>
           <div className="stack">
             <p><strong>{dateFor.j.property_address}</strong><br />
-              <span className="muted small">{dateFor.field === 'install_date' ? `${dateFor.j.hire_weeks} week hire starts from this day` : `Hire ends ${fmtLong(hireEnd(dateFor.j))}`}</span></p>
-            <Field label={dateFor.field === 'install_date' ? 'Install day' : 'Pack-up day'}>
+              <span className="muted small">{dateFor.field === 'pick_dates' ? `So the app only shows pieces free for this house (${dateFor.j.hire_weeks} week hire from install). You can change it later.` : dateFor.field === 'install_date' ? `${dateFor.j.hire_weeks} week hire starts from this day` : `Hire ends ${fmtLong(hireEnd(dateFor.j))}`}</span></p>
+            <Field label={dateFor.field === 'pack_date' || dateFor.field === 'collection_date' ? 'Pack-up day' : 'Install day'}>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
             <div className="chips">
-              {(dateFor.field === 'install_date'
+              {(dateFor.field === 'pick_dates'
+                ? [['In 1 week', addDays(t, 7)], ['In 2 weeks', addDays(t, 14)]]
+                : dateFor.field === 'install_date'
                 ? [['Today', t], ['Yesterday', addDays(t, -1)]]
                 : [['Hire end', hireEnd(dateFor.j)], ['Today', t], ['Tomorrow', addDays(t, 1)]]
               ).filter(([, v]) => v).map(([l, v]) => (
@@ -272,7 +302,7 @@ export default function Houses() {
             <div className="row">
               <button className="btn btn-ghost" onClick={() => setDateFor(null)}>Cancel</button>
               <button className="btn btn-primary grow btn-big" disabled={!date || busy} onClick={saveDate}>
-                {dateFor.field === 'install_date' ? 'Move to out' : 'Book pack up'}
+                {dateFor.field === 'pick_dates' ? 'Save & select inventory' : dateFor.field === 'install_date' ? 'Move to out' : 'Book pack up'}
               </button>
             </div>
           </div>
