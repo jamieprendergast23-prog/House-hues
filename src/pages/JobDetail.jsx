@@ -11,7 +11,7 @@ import JobRooms from '../components/JobRooms'
 import { Field, Modal, Loading, TypeTag, JobPill } from '../components/ui'
 
 const BLANK_JOB = {
-  type: 'staging', status: ERP ? 'enquiry' : 'booked', property_address: '', suburb: '', access_notes: '', notes: '',
+  type: 'staging', status: ERP ? 'enquiry' : 'quote_sent', property_address: '', suburb: '', access_notes: '', notes: '',
   client_id: null, site_visit_date: null, consult_date: null, pack_date: null, install_date: null,
   hire_weeks: 6, hire_end_date: null, collection_date: null, unpack_date: null,
 }
@@ -218,7 +218,7 @@ export default function JobDetail() {
             {ERP && <Field label="Site visit"><input type="date" value={job.site_visit_date || ''} onChange={set('site_visit_date')} /></Field>}
             {job.type === 'staging' && <>
               <Field label="Packing day"><input type="date" value={job.pack_date || ''} onChange={set('pack_date')} /></Field>
-              <Field label="Install day"><input type="date" value={job.install_date || ''} onChange={set('install_date')} /></Field>
+              <Field label="Install day" hint={job.install_date ? '' : 'Set this when quoting so you can select inventory'}><input type="date" value={job.install_date || ''} onChange={set('install_date')} /></Field>
               <Field label="Hire (weeks)"><input type="number" min="1" max="52" inputMode="numeric" value={job.hire_weeks} onChange={set('hire_weeks')} /></Field>
               <Field label="Hire finish" hint={job.hire_end_date ? 'Set by hand (extended)' : job.install_date ? `Auto: ${fmtDate(hireEnd({ ...job, hire_end_date: null }))}. Change if extended.` : 'Install day + hire weeks'}>
                 <input type="date" value={job.hire_end_date || ''} onChange={set('hire_end_date')} />

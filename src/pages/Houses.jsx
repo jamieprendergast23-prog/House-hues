@@ -87,20 +87,12 @@ export default function Houses() {
   const selectInventory = (j) => {
     setSheet(null)
     if (j.pack_date || j.install_date) return setPicker(j)
-    setDate(t)
-    setDateFor({ j, field: 'pick_dates' })
+    toast('Add the install date on the quote first, then select inventory.', 'error')
+    nav(`/jobs/${j.id}`)
   }
 
-  const saveDate = async () => {
+  const saveDate = () => {
     const { j, field } = dateFor
-    if (field === 'pick_dates') {
-      setBusy(true)
-      const { error } = await supabase.from('jobs').update({ install_date: date }).eq('id', j.id)
-      setBusy(false)
-      if (error) return toast(friendlyError(error), 'error')
-      setDateFor(null); load()
-      return setPicker({ ...j, install_date: date })
-    }
     if (field === 'install_date') return update(j, { install_date: date, status: 'installed', collection_date: null }, `Installed ${fmtDate(date)}. Hire ends ${fmtDate(hireEnd({ ...j, install_date: date }))}`)
     return update(j, { collection_date: date, status: j.status === 'collected' ? 'collected' : 'installed' }, `Pack up booked for ${fmtDate(date)}`)
   }
@@ -282,17 +274,15 @@ export default function Houses() {
       )}
 
       {dateFor && (
-        <Modal title={dateFor.field === 'install_date' ? 'When was it installed?' : dateFor.field === 'pick_dates' ? 'When is the install?' : 'Pick a pack-up date'} onClose={() => setDateFor(null)}>
+        <Modal title={dateFor.field === 'install_date' ? 'When was it installed?' : 'Pick a pack-up date'} onClose={() => setDateFor(null)}>
           <div className="stack">
             <p><strong>{dateFor.j.property_address}</strong><br />
-              <span className="muted small">{dateFor.field === 'pick_dates' ? `So the app only shows pieces free for this house (${dateFor.j.hire_weeks} week hire from install). You can change it later.` : dateFor.field === 'install_date' ? `${dateFor.j.hire_weeks} week hire starts from this day` : `Hire ends ${fmtLong(hireEnd(dateFor.j))}`}</span></p>
+              <span className="muted small">{dateFor.field === 'install_date' ? `${dateFor.j.hire_weeks} week hire starts from this day` : `Hire ends ${fmtLong(hireEnd(dateFor.j))}`}</span></p>
             <Field label={dateFor.field === 'pack_date' || dateFor.field === 'collection_date' ? 'Pack-up day' : 'Install day'}>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
             <div className="chips">
-              {(dateFor.field === 'pick_dates'
-                ? [['In 1 week', addDays(t, 7)], ['In 2 weeks', addDays(t, 14)]]
-                : dateFor.field === 'install_date'
+              {(dateFor.field === 'install_date'
                 ? [['Today', t], ['Yesterday', addDays(t, -1)]]
                 : [['Hire end', hireEnd(dateFor.j)], ['Today', t], ['Tomorrow', addDays(t, 1)]]
               ).filter(([, v]) => v).map(([l, v]) => (
@@ -302,7 +292,7 @@ export default function Houses() {
             <div className="row">
               <button className="btn btn-ghost" onClick={() => setDateFor(null)}>Cancel</button>
               <button className="btn btn-primary grow btn-big" disabled={!date || busy} onClick={saveDate}>
-                {dateFor.field === 'pick_dates' ? 'Save & select inventory' : dateFor.field === 'install_date' ? 'Move to out' : 'Book pack up'}
+                {dateFor.field === 'install_date' ? 'Move to out' : 'Book pack up'}
               </button>
             </div>
           </div>
