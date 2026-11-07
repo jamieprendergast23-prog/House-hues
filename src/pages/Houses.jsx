@@ -86,9 +86,7 @@ export default function Houses() {
   // furniture needs the job's dates so only free pieces are offered
   const selectInventory = (j) => {
     setSheet(null)
-    if (j.pack_date || j.install_date) return setPicker(j)
-    toast('Add the install date on the quote first, then select inventory.', 'error')
-    nav(`/jobs/${j.id}`)
+    setPicker(j)
   }
 
   const saveDate = () => {
@@ -249,7 +247,7 @@ export default function Houses() {
       )}
 
       {picker && (
-        <StockPicker jobId={picker.id} onClose={() => { setPicker(null); load() }} />
+        <StockPicker jobId={picker.id} noDates={!picker.pack_date && !picker.install_date} onClose={() => { setPicker(null); load() }} />
       )}
 
       {soldFor && (
