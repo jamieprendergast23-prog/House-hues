@@ -19,6 +19,8 @@ export default function ItemDetail({ byCode }) {
   const [item, setItem] = useState(isNew ? BLANK : null)
   const [costs, setCosts] = useState({})
   const [history, setHistory] = useState([])
+  // houses it has actually gone out to (packed), not just booked
+  const timesUsed = new Set(history.filter((h) => h.packed_at).map((h) => h.jobs?.id)).size
   const [editing, setEditing] = useState(isNew)
   const [busy, setBusy] = useState(false)
   const [missing, setMissing] = useState(false)
@@ -219,6 +221,7 @@ export default function ItemDetail({ byCode }) {
           {item.sku && <><dt>Your code</dt><dd>{item.sku}</dd></>}
           {costs.supplier && <><dt>Shop</dt><dd>{costs.supplier}</dd></>}
           {costs.purchase_cost && <><dt>Paid</dt><dd>${costs.purchase_cost}</dd></>}
+          <dt>Times used</dt><dd>{timesUsed === 0 ? 'Not used yet' : `${timesUsed} ${timesUsed === 1 ? 'house' : 'houses'}`}</dd>
           {item.colour && <><dt>Colour</dt><dd>{item.colour}</dd></>}
           {item.dimensions && <><dt>Size</dt><dd>{item.dimensions}</dd></>}
           <dt>Shed spot</dt><dd>{item.shed_location || '—'}</dd>
@@ -230,8 +233,8 @@ export default function ItemDetail({ byCode }) {
 
       <DamagePanel item={item} onChange={(f) => setItem({ ...item, ...f })} />
 
-      <h2>Job history</h2>
-      {history.length === 0 ? <Empty>Not used on a job yet.</Empty> : (
+      <h2>House history</h2>
+      {history.length === 0 ? <Empty>Not used in a house yet.</Empty> : (
         <ul className="list">
           {history.map((h) => (
             <li key={h.id}>
