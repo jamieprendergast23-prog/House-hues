@@ -561,3 +561,37 @@ button.house-card { width: 100%; text-align: left; font: inherit; cursor: pointe
 .pg-step button { width: 32px; height: 30px; border: 0; background: transparent; font-size: 1.1rem; cursor: pointer; }
 .pg-step button:disabled { opacity: .3; }
 .pg-step span { min-width: 18px; text-align: center; font-weight: 600; }
+
+/* ---- compact month + week view ---- */
+.cal-cell { min-height: 46px; }
+@media (min-width: 700px) { .cal-cell { min-height: 68px; } .cal-ev { font-size: .66rem; padding: 0 4px; } }
+.cal-cell.in-week { background: #f7f3ec; }
+.cal-cell.other { opacity: .35; }
+.week { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 14px; }
+.week h2 { margin: 0; }
+.week-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.week-day { border: 1px solid var(--line); border-radius: 4px; padding: 8px; min-height: 120px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; background: var(--bg); }
+.week-day.is-today { border-color: var(--ink); }
+.week-day.sel { box-shadow: inset 0 0 0 2px var(--stone); }
+.wd-head { display: flex; justify-content: space-between; align-items: baseline; font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.wd-head b { font-family: var(--serif); font-weight: 300; font-size: 1.4rem; color: var(--ink); }
+.wd-empty { color: var(--line); text-align: center; margin-top: 10px; }
+.wd-ev { display: flex; flex-direction: column; padding: 6px 8px; border-radius: 4px; color: #fff; font-size: .78rem; line-height: 1.25; }
+.wd-ev-label { font-weight: 600; }
+.wd-ev-addr { opacity: .92; }
+.wd-ev.ev-pack { color: var(--ink); }
+.week-hire { margin-top: 12px; }
+.week-hire .chips { flex-wrap: wrap; margin-top: 6px; }
+@media (max-width: 800px) {
+  .week-grid { grid-template-columns: 1fr; gap: 6px; }
+  .week-day { min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .wd-head { width: 64px; flex-direction: column; align-items: flex-start; }
+  .wd-empty { margin: 0; }
+  .wd-ev { flex: 1 1 200px; }
+}
+@media (max-width: 800px) {
+  .week-day { padding: 6px 10px; gap: 8px; }
+  .wd-head { flex-direction: row; align-items: baseline; gap: 6px; width: 72px; }
+  .wd-head b { font-size: 1.15rem; }
+  .wd-empty { flex: 1; text-align: left; }
+}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { EVENT_KINDS } from '../lib/constants'
-import { toISO, today, hireEnd, fmtLong, parseDate } from '../lib/format'
+import { toISO, today, hireEnd, parseDate, addDays } from '../lib/format'
 import { Loading, TypeTag } from '../components/ui'
 
 export function jobEvents(jobs) {
@@ -39,14 +39,27 @@ export default function CalendarPage() {
     const first = new Date(month)
     const offset = (first.getDay() + 6) % 7 // Monday start
     const start = new Date(first); start.setDate(1 - offset)
-    return Array.from({ length: 42 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d })
+    const daysIn = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate()
+    const n = Math.ceil((offset + daysIn) / 7) * 7 // only the weeks this month needs
+    return Array.from({ length: n }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d })
   }, [month])
 
   if (!jobs) return <Loading />
 
   const shift = (n) => setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1))
-  const dayEvents = byDate[day] || []
-  const hire = onHire(day)
+  // week view: Monday to Sunday around the selected day
+  const sel = parseDate(day)
+  const monday = new Date(sel); monday.setDate(sel.getDate() - ((sel.getDay() + 6) % 7))
+  const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return toISO(d) })
+  const weekSet = new Set(week)
+  const hireWeek = (jobs || []).filter((j) => j.type === 'staging' && j.install_date && !['complete'].includes(j.status) &&
+    j.install_date <= week[6] && week[0] <= (j.collection_date || hireEnd(j)))
+  const shiftWeek = (n) => {
+    const d = addDays(day, n * 7)
+    setDay(d)
+    const pd = parseDate(d)
+    if (pd.getMonth() !== month.getMonth() || pd.getFullYear() !== month.getFullYear()) setMonth(new Date(pd.getFullYear(), pd.getMonth(), 1))
+  }
 
   return (
     <div className="stack">
@@ -70,41 +83,58 @@ export default function CalendarPage() {
         {cells.map((d) => {
           const iso = toISO(d)
           const evs = byDate[iso] || []
-          const hireN = onHire(iso).length
           return (
             <button key={iso} onClick={() => setDay(iso)}
-              className={`cal-cell ${d.getMonth() !== month.getMonth() ? 'other' : ''} ${iso === today() ? 'is-today' : ''} ${iso === day ? 'sel' : ''}`}>
+              className={`cal-cell ${d.getMonth() !== month.getMonth() ? 'other' : ''} ${iso === today() ? 'is-today' : ''} ${iso === day ? 'sel' : ''} ${weekSet.has(iso) ? 'in-week' : ''}`}>
               <span className="cal-num">{d.getDate()}</span>
               <span className="cal-evs">
-                {evs.slice(0, 3).map((e, i) => (
+                {evs.slice(0, 2).map((e, i) => (
                   <span key={i} className={`cal-ev ${e.cls}`}><span className="cal-ev-txt">{e.label} · {e.job.property_address}</span></span>
                 ))}
-                {evs.length > 3 && <span className="cal-more">+{evs.length - 3}</span>}
+                {evs.length > 2 && <span className="cal-more">+{evs.length - 2}</span>}
               </span>
-              {hireN > 0 && <span className="cal-hire" title={`${hireN} on hire`}>{hireN}</span>}
             </button>
           )
         })}
       </div>
 
-      <section className="card">
-        <h2>{fmtLong(day)}</h2>
-        {dayEvents.length === 0 && <p className="muted">Nothing scheduled.</p>}
-        <ul className="list">
-          {dayEvents.map((e, i) => <EventRow key={i} e={e} />)}
-        </ul>
-        {hire.length > 0 && (
-          <>
-            <h3>On hire ({hire.length})</h3>
-            <ul className="list">
-              {hire.map((j) => (
-                <li key={j.id}><Link className="list-row" to={`/jobs/${j.id}`}><div className="grow">
-                  <div className="row-title">{j.property_address}</div>
-                  <div className="row-sub">until {parseDate(j.collection_date || hireEnd(j)).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</div>
-                </div></Link></li>
+      <section className="week">
+        <div className="row between">
+          <h2>Week of {parseDate(week[0]).toLocaleDateString('en-AU', { day: 'numeric', month: 'long' })}</h2>
+          <div className="row">
+            <button className="btn btn-small" onClick={() => shiftWeek(-1)} aria-label="Previous week">‹</button>
+            <button className="btn btn-small" onClick={() => shiftWeek(1)} aria-label="Next week">›</button>
+          </div>
+        </div>
+        <div className="week-grid">
+          {week.map((iso) => {
+            const evs = byDate[iso] || []
+            const d = parseDate(iso)
+            return (
+              <div key={iso} className={`week-day ${iso === today() ? 'is-today' : ''} ${iso === day ? 'sel' : ''}`} onClick={() => setDay(iso)}>
+                <div className="wd-head">
+                  <span>{d.toLocaleDateString('en-AU', { weekday: 'short' })}</span>
+                  <b>{d.getDate()}</b>
+                </div>
+                {evs.length === 0 ? <div className="wd-empty">–</div> : evs.map((e, i) => (
+                  <Link key={i} to={`/jobs/${e.job.id}`} className={`wd-ev ${e.cls}`}>
+                    <span className="wd-ev-label">{e.label}</span>
+                    <span className="wd-ev-addr">{e.job.property_address}</span>
+                  </Link>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+        {hireWeek.length > 0 && (
+          <div className="week-hire">
+            <span className="small muted">On hire this week ({hireWeek.length}):</span>
+            <div className="chips">
+              {hireWeek.map((j) => (
+                <Link key={j.id} to={`/jobs/${j.id}`} className="chip">{j.property_address} · until {parseDate(j.collection_date || hireEnd(j)).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</Link>
               ))}
-            </ul>
-          </>
+            </div>
+          </div>
         )}
       </section>
     </div>
