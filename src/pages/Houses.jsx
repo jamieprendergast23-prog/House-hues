@@ -247,7 +247,7 @@ export default function Houses() {
       )}
 
       {picker && (
-        <StockPicker jobId={picker.id} noDates={!picker.pack_date && !picker.install_date} onClose={() => { setPicker(null); load() }} />
+        <StockPicker jobId={picker.id} onClose={() => { setPicker(null); load() }} />
       )}
 
       {soldFor && (

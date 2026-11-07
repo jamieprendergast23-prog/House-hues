@@ -143,13 +143,13 @@ function vItems() {
   return db.items.map((i) => {
     const out = db.job_items.filter((x) => x.item_id === i.id && x.packed_at && !x.returned_at)
       .sort((a, b) => b.packed_at.localeCompare(a.packed_at))[0]
-    const nxt = db.job_items.filter((x) => x.item_id === i.id && !x.packed_at && !x.returned_at && x.period[1] >= T)
+    const nxt = db.job_items.filter((x) => x.item_id === i.id && !x.packed_at && !x.returned_at && x.period && x.period[1] >= T)
       .sort((a, b) => a.period[0].localeCompare(b.period[0]))[0]
     const oj = out && db.jobs.find((j) => j.id === out.job_id)
     const nj = nxt && db.jobs.find((j) => j.id === nxt.job_id)
     return {
-      ...i, out_job_id: oj?.id || null, out_address: oj?.property_address || null, out_since: out?.packed_at || null, out_until: out?.period[1] || null,
-      next_job_id: nj?.id || null, next_address: nj?.property_address || null, next_start: nxt?.period[0] || null,
+      ...i, out_job_id: oj?.id || null, out_address: oj?.property_address || null, out_since: out?.packed_at || null, out_until: out?.period?.[1] || null,
+      next_job_id: nj?.id || null, next_address: nj?.property_address || null, next_start: nxt?.period?.[0] || null,
     }
   })
 }
@@ -263,10 +263,9 @@ class Query {
         if (t === 'job_items') {
           const j = db.jobs.find((x) => x.id === r.job_id)
           const period = j && hold(j)
-          if (!period) return err('Set the packing or install date on this job before adding items')
           if (db.job_items.some((x) => x.job_id === r.job_id && x.item_id === r.item_id)) return err('dup', '23505')
-          if (clashFor(r.item_id, period)) return err('no_double_booking', '23P01')
-          Object.assign(r, { period, room: r.room || 'Living', packed_at: null, returned_at: null })
+          if (period && clashFor(r.item_id, period)) return err('no_double_booking', '23P01')
+          Object.assign(r, { period: period || null, room: r.room || 'Living', packed_at: null, returned_at: null })
         }
         if (t === 'item_costs' || t === 'job_finance') delete r.id
         made.push(r)

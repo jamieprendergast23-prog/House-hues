@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase, friendlyError, fetchAll, naturalCompare } from '../lib/supabase'
 import { ROOMS, UNPLACED } from '../lib/constants'
-import { fmtDate, today, addDays } from '../lib/format'
+import { fmtDate } from '../lib/format'
 import { toast } from '../lib/toast'
 import { Modal, Loading, Empty, Field } from './ui'
 import Scanner from './Scanner'
 
 /**
- * Pick furniture for a house, by look. Only shows pieces free for the job's dates:
- * in the shed now, or out at another house but due back in time.
+ * Pick furniture for a house, by look. Shows all available stock. If the house has
+ * dates, pieces booked elsewhere for those dates are left out (the database also
+ * blocks double-booking when dates are added later).
  */
-export default function StockPicker({ jobId, onClose, initialRoom, noDates = false }) {
+export default function StockPicker({ jobId, onClose, initialRoom }) {
   const [items, setItems] = useState(null)
   const [room, setRoom] = useState(initialRoom || UNPLACED)
   const [cat, setCat] = useState('')
@@ -21,20 +22,12 @@ export default function StockPicker({ jobId, onClose, initialRoom, noDates = fal
   const [scan, setScan] = useState(false)
   const [added, setAdded] = useState(0)
   const [limit, setLimit] = useState(120)
-  const [dated, setDated] = useState(!noDates)
-  const [installDate, setInstallDate] = useState(addDays(today(), 14))
 
   const load = useCallback(() => {
-    // no install date yet: show what's in the shed and free right now
-    if (!dated) {
-      return fetchAll(() => supabase.from('v_items').select('*').eq('status', 'available').is('out_job_id', null).is('next_job_id', null).order('code'))
-        .then(setItems)
-        .catch((error) => { toast(friendlyError(error), 'error'); setItems([]) })
-    }
     fetchAll(() => supabase.rpc('available_items', { p_job_id: jobId }))
       .then(setItems)
       .catch((error) => { toast(friendlyError(error), 'error'); setItems([]) })
-  }, [jobId, dated])
+  }, [jobId])
   useEffect(() => { load() }, [load])
   useEffect(() => { setSub(''); setLimit(120) }, [cat])
   useEffect(() => { setLimit(120) }, [q, sub])
@@ -79,12 +72,6 @@ export default function StockPicker({ jobId, onClose, initialRoom, noDates = fal
   const add = async (ids) => {
     if (!ids.length) return
     setBusy(true)
-    if (!dated) {
-      // pieces are held from the install date, so save it first
-      const { error: e1 } = await supabase.from('jobs').update({ install_date: installDate }).eq('id', jobId)
-      if (e1) { setBusy(false); return toast(friendlyError(e1), 'error') }
-      setDated(true)
-    }
     const { error } = await supabase.from('job_items').insert(ids.map((item_id) => ({ job_id: jobId, item_id, room })))
     setBusy(false)
     if (error) { toast(friendlyError(error), 'error'); load(); return }
@@ -96,7 +83,7 @@ export default function StockPicker({ jobId, onClose, initialRoom, noDates = fal
   const onScan = async (code) => {
     const { data: it } = await supabase.from('items').select('id, name').eq('code', code).maybeSingle()
     if (!it) return toast(`${code} not found`, 'error')
-    if (!(items || []).some((i) => i.id === it.id)) return toast(`${it.name} isn’t free for these dates (or already added)`, 'error')
+    if (!(items || []).some((i) => i.id === it.id)) return toast(`${it.name} isn’t available (or already added)`, 'error')
     await add([it.id])
   }
 
@@ -128,18 +115,9 @@ export default function StockPicker({ jobId, onClose, initialRoom, noDates = fal
         <input className="search grow" placeholder="Search code, description, colour…" value={q} onChange={(e) => setQ(e.target.value)} />
         <button type="button" className="btn" onClick={() => setScan(true)}>Scan</button>
       </div>
-      {!dated && (
-        <div className="note small row">
-          <span className="grow">No install date on this house yet, so this shows what’s in the shed now. Pieces are held from:</span>
-          <input type="date" value={installDate} min={today()} onChange={(e) => setInstallDate(e.target.value)} style={{ width: 'auto' }} />
-        </div>
-      )}
-      <p className="small muted">
-        Everything here is free for this house’s dates: in the shed now, or <span className="back-dot">due back</span> from another house in time.
-        {added > 0 && ` ${added} added so far.`}
-      </p>
+      {added > 0 && <p className="small muted">{added} added so far.</p>}
 
-      {!items ? <Loading /> : shown.length === 0 ? <Empty>Nothing free matches.</Empty> : (
+      {!items ? <Loading /> : shown.length === 0 ? <Empty>Nothing matches.</Empty> : (
         <div className="pick-grid">
           {shown.slice(0, limit).map((g) => {
             const n = want[g.key] || 0
@@ -149,13 +127,13 @@ export default function StockPicker({ jobId, onClose, initialRoom, noDates = fal
                 <button type="button" className="pg-img" onClick={() => setCount(g, n ? 0 : 1)}>
                   {g.photo ? <img src={g.photo} alt="" loading="lazy" /> : <span className="tile-code">{g.sku || g.name}</span>}
                   {n > 0 && <span className="pg-check">✓</span>}
-                  <span className="pg-free">{g.pieces.length} free</span>
+                  <span className="pg-free">{g.pieces.length} available</span>
                 </button>
                 <div className="pg-body">
                   <div className="pg-name">{g.name}</div>
                   <div className="pg-sub">{[g.sku, g.subcategory || g.category].filter(Boolean).join(' · ')}</div>
-                  {g.freeNow === 0 && soonest && <div className="pg-back">Back from {soonest.out_address} {fmtDate(soonest.out_until)}</div>}
-                  {g.freeNow > 0 && g.back.length > 0 && <div className="pg-back">{g.freeNow} in shed · {g.back.length} due back</div>}
+                  {g.freeNow === 0 && soonest && <div className="pg-back">Out at {soonest.out_address} until {fmtDate(soonest.out_until)}</div>}
+                  {g.freeNow > 0 && g.back.length > 0 && <div className="pg-back">{g.freeNow} in shed · {g.back.length} out on hire</div>}
                   {g.pieces.length > 1 && (
                     <div className="pg-step">
                       <button type="button" onClick={() => setCount(g, n - 1)} disabled={!n} aria-label="One less">−</button>

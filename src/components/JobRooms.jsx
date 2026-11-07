@@ -14,7 +14,7 @@ const roomOrder = (r) => { const k = ROOMS.indexOf(r); return k < 0 ? 50 : k }
  * Rooms on a job: site photos, design renders and the furniture for each room.
  * The design renders are what the crew see at the top of each room on the pick list.
  */
-export default function JobRooms({ jobId, lines, canAddFurniture, onAddFurniture, onRemoveLine, onOpenPickList, packedCount, onLinesChanged }) {
+export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, onOpenPickList, packedCount, onLinesChanged }) {
   const [photos, setPhotos] = useState([])
   const [extra, setExtra] = useState([])
   const [busy, setBusy] = useState('')
@@ -114,9 +114,9 @@ export default function JobRooms({ jobId, lines, canAddFurniture, onAddFurniture
       <p className="small muted">For each room: site photos from the visit, the design (screenshots or renders from your planner), and the furniture. The crew see the design at the top of each room on their pick list.</p>
 
       <div className="row">
-        {canAddFurniture && <button type="button" className="btn btn-primary" onClick={() => onAddFurniture(UNPLACED)}>+ Pick furniture for this house</button>}
+        <button type="button" className="btn btn-primary" onClick={() => onAddFurniture(UNPLACED)}>+ Pick furniture for this house</button>
         <button type="button" className="btn" onClick={() => setNewRoom('')}>+ Add room</button>
-        {canAddFurniture && <button type="button" className="btn" onClick={() => setImporting(true)}>Import design list</button>}
+        <button type="button" className="btn" onClick={() => setImporting(true)}>Import design list</button>
         <button type="button" className="btn" onClick={onOpenPickList}>Open pick list</button>
       </div>
       {newRoom !== null && (
@@ -193,9 +193,7 @@ export default function JobRooms({ jobId, lines, canAddFurniture, onAddFurniture
                 ))}
               </ul>
             )}
-            {canAddFurniture
-              ? <button type="button" className="btn btn-small" onClick={() => onAddFurniture(room)}>+ Add furniture to {room}</button>
-              : <p className="small muted">Add a packing or install date (and save) to add furniture.</p>}
+            <button type="button" className="btn btn-small" onClick={() => onAddFurniture(room)}>+ Add furniture to {room}</button>
           </div>
         )
       })}

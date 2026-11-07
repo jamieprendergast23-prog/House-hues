@@ -294,7 +294,6 @@ export default function JobDetail() {
 
       {!isNew && job.type === 'staging' && (
         <JobRooms jobId={id} lines={lines} packedCount={packedCount}
-          canAddFurniture={Boolean(saved?.pack_date || saved?.install_date)}
           onAddFurniture={(room) => setAdding(room)}
           onRemoveLine={removeLine}
           onOpenPickList={() => nav(`/pick/${id}`)}
