@@ -538,3 +538,26 @@ button.house-card { width: 100%; text-align: left; font: inherit; cursor: pointe
 .house-card.dragging { opacity: .4; }
 .move-row { border-top: 1px solid var(--line); padding-top: 10px; }
 .move-row .chips { margin-top: 6px; flex-wrap: wrap; }
+.room-block.unplaced { background: #faf6ef; border: 1.5px dashed var(--stone); border-radius: 6px; padding: 12px; }
+.room-chips { flex-wrap: wrap; }
+
+/* ---- stock picker ---- */
+.modal-wide { max-width: 1100px; }
+.picker-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; max-height: 58vh; overflow-y: auto; padding: 2px; }
+@media (max-width: 480px) { .pick-grid { grid-template-columns: repeat(2, 1fr); max-height: 52vh; } }
+.pg-tile { display: flex; flex-direction: column; }
+.pg-img { position: relative; aspect-ratio: 1; padding: 0; border: 0; border-radius: 4px; overflow: hidden; background: var(--accent-soft); cursor: pointer; }
+.pg-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pg-tile.on .pg-img { outline: 3px solid var(--ink); outline-offset: 2px; }
+.pg-check { position: absolute; left: 6px; top: 6px; width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: .85rem; }
+.pg-free { position: absolute; right: 6px; top: 6px; background: rgba(255,255,255,.92); color: var(--ink); font-size: .7rem; font-weight: 700; padding: 2px 7px; border-radius: 99px; }
+.pg-body { padding: 6px 2px 0; }
+.pg-name { font-size: .88rem; font-weight: 500; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pg-sub { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+.pg-back, .back-dot { font-size: .75rem; color: #8a7258; }
+.back-dot { font-size: inherit; font-weight: 600; }
+.pg-step { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; border: 1px solid var(--line); border-radius: 4px; }
+.pg-step button { width: 32px; height: 30px; border: 0; background: transparent; font-size: 1.1rem; cursor: pointer; }
+.pg-step button:disabled { opacity: .3; }
+.pg-step span { min-width: 18px; text-align: center; font-weight: 600; }

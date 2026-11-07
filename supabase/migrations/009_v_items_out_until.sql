@@ -1,0 +1,3 @@
+-- v_items gains out_until: the last day an item that's out is booked at its current house,
+-- so the picker can say "back from 5 Ireland Rd on 22 Nov".
+-- (recreates v_items + available_items exactly as in 001, plus out_.until)

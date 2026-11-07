@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase, friendlyError, fetchAll } from '../lib/supabase'
 import { parseCSV } from '../lib/csv'
-import { ROOMS } from '../lib/constants'
+import { ROOMS, UNPLACED } from '../lib/constants'
 import { toast } from '../lib/toast'
 import { Modal, Thumb, Loading } from './ui'
 
@@ -101,7 +101,7 @@ export default function DesignImport({ jobId, rooms, defaultRoom, onClose, onDon
       const pick = freeOnes.slice(0, p.qty)
       pick.forEach((c) => taken.add(c.id))
       return {
-        i, raw: p.raw, qty: p.qty, room: p.room || defaultRoom || rooms[0] || 'Living',
+        i, raw: p.raw, qty: p.qty, room: p.room || defaultRoom || UNPLACED,
         item: candidates[0] || null, pick, how, include: pick.length > 0,
         short: candidates.length ? p.qty - pick.length : 0,
       }
@@ -156,7 +156,7 @@ export default function DesignImport({ jobId, rooms, defaultRoom, onClose, onDon
                   </div>
                 </div>
                 <select value={r.room} onChange={(e) => setRows(rows.map((x) => (x.i === r.i ? { ...x, room: e.target.value } : x)))} style={{ width: 'auto', minHeight: 38 }}>
-                  {[...new Set([r.room, ...allRooms])].map((x) => <option key={x}>{x}</option>)}
+                  {[...new Set([r.room, ...allRooms, UNPLACED])].map((x) => <option key={x} value={x}>{x === UNPLACED ? "Choose later" : x}</option>)}
                 </select>
               </li>
             ))}

@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { Link, useNavigate, useParams, useLocation } from 'react-router-dom'
-import { supabase, friendlyError, fetchAll } from '../lib/supabase'
-import { PIPELINES, ROOMS, TYPE_LABEL } from '../lib/constants'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
+import { supabase, friendlyError } from '../lib/supabase'
+import { PIPELINES, TYPE_LABEL } from '../lib/constants'
 import { fmtDate, fmtLong, hireEnd, money, addDays } from '../lib/format'
 import { toast } from '../lib/toast'
 import { ERP, PLANNER } from '../lib/features'
 import HireCard from '../components/HireCard'
+import StockPicker from '../components/StockPicker'
 import JobRooms from '../components/JobRooms'
-import { Field, Modal, Thumb, Loading, TypeTag, JobPill, Empty } from '../components/ui'
-import Scanner from '../components/Scanner'
+import { Field, Modal, Loading, TypeTag, JobPill } from '../components/ui'
 
 const BLANK_JOB = {
   type: 'staging', status: ERP ? 'enquiry' : 'booked', property_address: '', suburb: '', access_notes: '', notes: '',
@@ -311,7 +311,7 @@ export default function JobDetail() {
         </div>
       )}
 
-      {adding && <AddItems jobId={id} initialRoom={typeof adding === 'string' ? adding : undefined} onClose={() => { setAdding(false); loadLines() }} />}
+      {adding && <StockPicker jobId={id} initialRoom={typeof adding === 'string' ? adding : undefined} onClose={() => { setAdding(false); loadLines() }} />}
 
       {conflicts && (
         <Modal title="Those dates clash" onClose={() => setConflicts(null)}>
@@ -329,89 +329,6 @@ export default function JobDetail() {
         </Modal>
       )}
     </div>
-  )
-}
-
-/** Picker that only ever shows items free for this job's dates */
-function AddItems({ jobId, onClose, initialRoom }) {
-  const [items, setItems] = useState(null)
-  const [room, setRoom] = useState(initialRoom || ROOMS[0])
-  const [q, setQ] = useState('')
-  const [sel, setSel] = useState(new Set())
-  const [busy, setBusy] = useState(false)
-  const [scan, setScan] = useState(false)
-  const [added, setAdded] = useState(0)
-
-  const load = useCallback(() => {
-    fetchAll(() => supabase.rpc('available_items', { p_job_id: jobId }))
-      .then(setItems)
-      .catch((error) => { toast(friendlyError(error), 'error'); setItems([]) })
-  }, [jobId])
-  useEffect(load, [load])
-
-  const shown = (items || []).filter((i) => {
-    const s = q.trim().toLowerCase()
-    return !s || [i.name, i.code, i.category, i.colour].some((v) => v?.toLowerCase().includes(s))
-  })
-
-  const add = async (ids) => {
-    if (!ids.length) return
-    setBusy(true)
-    const { error } = await supabase.from('job_items').insert(ids.map((item_id) => ({ job_id: jobId, item_id, room })))
-    setBusy(false)
-    if (error) { toast(friendlyError(error), 'error'); load(); return false }
-    setAdded((n) => n + ids.length)
-    setSel(new Set()); load()
-    toast(`${ids.length} added to ${room}`)
-    return true
-  }
-
-  const onScan = async (code) => {
-    const { data: it } = await supabase.from('items').select('id, name').eq('code', code).maybeSingle()
-    if (!it) return toast(`${code} not found`, 'error')
-    if (!(items || []).some((i) => i.id === it.id)) return toast(`${it.name} isn’t free for these dates (or already added)`, 'error')
-    await add([it.id])
-  }
-
-  return (
-    <Modal title="Add furniture" onClose={onClose}>
-      <Field label="Room">
-        <select value={room} onChange={(e) => setRoom(e.target.value)}>
-          {[...new Set([...(initialRoom ? [initialRoom] : []), ...ROOMS])].map((r) => <option key={r}>{r}</option>)}
-        </select>
-      </Field>
-      <div className="row">
-        <input className="search grow" placeholder="Search free items…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <button type="button" className="btn" onClick={() => setScan(true)}>Scan</button>
-      </div>
-      <p className="small muted">Showing only items free for this job’s dates. {added > 0 && `${added} added so far.`}</p>
-      {!items ? <Loading /> : shown.length === 0 ? <Empty>No free items match.</Empty> : (
-        <ul className="list picker">
-          {shown.map((i) => (
-            <li key={i.id}>
-              <label className="list-row">
-                <input type="checkbox" className="big-check" checked={sel.has(i.id)}
-                  onChange={() => { const n = new Set(sel); n.has(i.id) ? n.delete(i.id) : n.add(i.id); setSel(n) }} />
-                <Thumb url={i.photo_url} size={44} />
-                <div className="grow">
-                  <div className="row-title">{i.name}</div>
-                  <div className="row-sub">{i.code} · {i.category}{i.colour ? ` · ${i.colour}` : ''}</div>
-                </div>
-              </label>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="row sticky-actions">
-        <button type="button" className="btn btn-ghost" onClick={onClose}>Done</button>
-        <button type="button" className="btn btn-primary grow" disabled={!sel.size || busy} onClick={() => add([...sel])}>
-          Add {sel.size || ''} to {room}
-        </button>
-      </div>
-      {scan && (
-        <Scanner continuous title={`Scan to add to ${room}`} onClose={() => setScan(false)} onCode={onScan} />
-      )}
-    </Modal>
   )
 }
 

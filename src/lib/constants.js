@@ -6,6 +6,9 @@ export const CATEGORIES = [
   'Mirror', 'Cushion', 'Throw', 'Plant', 'Decor', 'Outdoor', 'Other',
 ]
 
+// pieces chosen for a house before she's decided the room
+export const UNPLACED = 'Room not chosen'
+
 export const ROOMS = [
   'Living', 'Dining', 'Kitchen', 'Master bed', 'Bed 2', 'Bed 3', 'Bed 4',
   'Study', 'Entry', 'Bathroom', 'Outdoor',

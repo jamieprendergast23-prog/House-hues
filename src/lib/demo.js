@@ -148,7 +148,7 @@ function vItems() {
     const oj = out && db.jobs.find((j) => j.id === out.job_id)
     const nj = nxt && db.jobs.find((j) => j.id === nxt.job_id)
     return {
-      ...i, out_job_id: oj?.id || null, out_address: oj?.property_address || null, out_since: out?.packed_at || null,
+      ...i, out_job_id: oj?.id || null, out_address: oj?.property_address || null, out_since: out?.packed_at || null, out_until: out?.period[1] || null,
       next_job_id: nj?.id || null, next_address: nj?.property_address || null, next_start: nxt?.period[0] || null,
     }
   })
