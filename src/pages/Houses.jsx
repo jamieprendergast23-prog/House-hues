@@ -6,15 +6,32 @@ import { paymentLabel } from '../components/HireCard'
 import { Loading, Modal, Field } from '../components/ui'
 import { toast } from '../lib/toast'
 
-// Her whiteboard, digital: houses out + end dates, pack-ups, coming up, quote stage
+// Her whiteboard, digital. Houses flow left to right: quote → booked → out → pack up.
+const COLS = [
+  ['quote', 'Quote stage'],
+  ['booked', 'Booked, coming up'],
+  ['out', 'Out & end dates'],
+  ['packup', 'Pack ups'],
+]
+
+function columnOf(j) {
+  if (['enquiry', 'site_visit', 'quote_sent'].includes(j.status)) return 'quote'
+  if (['accepted', 'booked', 'packing'].includes(j.status)) return 'booked'
+  if (j.status === 'installed') return j.collection_date ? 'packup' : 'out'
+  if (j.status === 'collected') return 'packup'
+  return null // complete / cancelled
+}
+
 export default function Houses() {
   const nav = useNavigate()
   const [jobs, setJobs] = useState(null)
-  const [sheet, setSheet] = useState(null) // { j, col }
-  const [dateFor, setDateFor] = useState(null) // job being given a pack-up date
+  const [sheet, setSheet] = useState(null) // job tapped
+  const [dateFor, setDateFor] = useState(null) // { j, field: 'collection_date' | 'install_date' }
   const [date, setDate] = useState('')
   const [busy, setBusy] = useState(false)
-  const [soldFor, setSoldFor] = useState(null) // { j, sold_date, sale_price, guide_price, agent_name }
+  const [soldFor, setSoldFor] = useState(null)
+  const [dragId, setDragId] = useState(null)
+  const [over, setOver] = useState(null)
 
   const load = useCallback(() => {
     supabase.from('jobs').select('*, clients(name), job_finance(*), job_items(count)')
@@ -26,27 +43,13 @@ export default function Houses() {
   if (!jobs) return <Loading />
 
   const t = today()
-  const done = (j) => ['complete', 'collected'].includes(j.status)
-
-  // still out, no pack-up booked yet
-  const out = jobs.filter((j) => !done(j) && j.install_date && j.install_date <= t && !j.collection_date)
-    .map((j) => ({ ...j, end: hireEnd(j) }))
-    .sort((a, b) => (a.end || '').localeCompare(b.end || ''))
-
-  // pack-ups: collections booked (any date ahead, or overdue), plus upcoming packing/unpack days
-  const packUps = []
-  for (const j of jobs) {
-    if (j.status === 'complete') continue
-    if (j.collection_date && !done(j)) packUps.push({ j, date: j.collection_date, what: 'Pack up', kind: 'collect' })
-    if (j.pack_date && j.pack_date >= t && j.pack_date <= addDays(t, 21) && !['installed', 'packing'].includes(j.status)) packUps.push({ j, date: j.pack_date, what: 'Pack for install', kind: 'pack' })
-    if (j.status === 'collected' && j.unpack_date && j.unpack_date >= t) packUps.push({ j, date: j.unpack_date, what: 'Unpack', kind: 'unpack' })
-  }
-  packUps.sort((a, b) => a.date.localeCompare(b.date))
-
-  const coming = jobs.filter((j) => !done(j) && j.status !== 'quote_sent' && j.status !== 'enquiry' && (!j.install_date || j.install_date > t))
-    .sort((a, b) => (a.install_date || '9').localeCompare(b.install_date || '9'))
-  const quotes = jobs.filter((j) => ['quote_sent', 'enquiry'].includes(j.status))
-  const recent = jobs.filter(done).sort((a, b) => (hireEnd(b) || '').localeCompare(hireEnd(a) || '')).slice(0, 6)
+  const by = { quote: [], booked: [], out: [], packup: [] }
+  for (const j of jobs) { const c = columnOf(j); if (c) by[c].push({ ...j, end: hireEnd(j) }) }
+  by.quote.sort((a, b) => b.created_at.localeCompare(a.created_at))
+  by.booked.sort((a, b) => (a.install_date || '9').localeCompare(b.install_date || '9'))
+  by.out.sort((a, b) => (a.end || '9').localeCompare(b.end || '9'))
+  by.packup.sort((a, b) => (a.status === 'collected') - (b.status === 'collected') || (a.collection_date || '9').localeCompare(b.collection_date || '9'))
+  const recent = jobs.filter((j) => j.status === 'complete').sort((a, b) => (hireEnd(b) || '').localeCompare(hireEnd(a) || '')).slice(0, 6)
 
   const update = async (j, fields, msg) => {
     setBusy(true)
@@ -56,6 +59,32 @@ export default function Houses() {
     toast(msg)
     setSheet(null); setDateFor(null)
     load()
+  }
+
+  const askDate = (j, field) => {
+    setSheet(null)
+    const def = field === 'install_date' ? (j.install_date || t)
+      : j.collection_date || (hireEnd(j) && hireEnd(j) >= t ? hireEnd(j) : t)
+    setDate(def)
+    setDateFor({ j, field })
+  }
+
+  // what happens when a house lands in a column
+  const moveTo = (j, col) => {
+    if (columnOf(j) === col && col !== 'packup') return
+    if (col === 'quote') return update(j, { status: 'quote_sent' }, 'Moved to quote stage')
+    if (col === 'booked') return update(j, { status: 'booked', collection_date: null }, 'Moved to booked')
+    if (col === 'out') {
+      if (!j.install_date) return askDate(j, 'install_date')
+      return update(j, { status: 'installed', collection_date: null }, 'Moved to out')
+    }
+    if (col === 'packup') return askDate({ ...j }, 'collection_date')
+  }
+
+  const saveDate = () => {
+    const { j, field } = dateFor
+    if (field === 'install_date') return update(j, { install_date: date, status: 'installed', collection_date: null }, `Installed ${fmtDate(date)}. Hire ends ${fmtDate(hireEnd({ ...j, install_date: date }))}`)
+    return update(j, { collection_date: date, status: j.status === 'collected' ? 'collected' : 'installed' }, `Pack up booked for ${fmtDate(date)}`)
   }
 
   const askSold = (j) => {
@@ -74,14 +103,51 @@ export default function Houses() {
     toast('Sale recorded. Added to your Results.')
     setSoldFor(null)
     load()
-    if (!j.collection_date) askDate({ ...j, sold_date: f.sold_date })
+    if (!j.collection_date) askDate(j, 'collection_date')
   }
 
-  const askDate = (j) => {
-    setSheet(null)
-    setDate(j.collection_date || (hireEnd(j) && hireEnd(j) >= t ? hireEnd(j) : t))
-    setDateFor(j)
+  const onDrop = (col) => (e) => {
+    e.preventDefault()
+    setOver(null)
+    const j = jobs.find((x) => x.id === (dragId || e.dataTransfer.getData('text/plain')))
+    setDragId(null)
+    if (j) moveTo(j, col)
   }
+
+  const cardBody = (j, col) => {
+    if (col === 'quote') return <div className="hc-sub">{j.clients?.name || 'No client set'}{j.site_visit_date ? ` · visit ${fmtDate(j.site_visit_date)}` : ''}</div>
+    if (col === 'booked') {
+      const late = j.install_date && j.install_date < t
+      return (
+        <>
+          <div className="hc-line"><b>{j.install_date ? `Install ${fmtDate(j.install_date)}` : 'No install date yet'}</b>{late && <span className="warn-text">drag to Out</span>}</div>
+          {j.pack_date && <div className="hc-sub">Pack {fmtDate(j.pack_date)} · {j.job_items?.[0]?.count || 0} pieces</div>}
+          <Pay j={j} />
+        </>
+      )
+    }
+    if (col === 'out') {
+      const d = daysUntil(j.end)
+      return (
+        <>
+          <div className="hc-line"><b>Ends {fmtDate(j.end)}</b> <span className={d <= 7 ? 'warn-text' : 'muted'}>{d < 0 ? `${-d}d over` : d === 0 ? 'today' : `${d} days`}</span></div>
+          <div className="hc-sub">Installed {fmtDate(j.install_date)} · {j.hire_weeks} wks{j.sold_date ? ` · SOLD ${fmtDate(j.sold_date)}` : ''}</div>
+          <Pay j={j} />
+        </>
+      )
+    }
+    if (j.status === 'collected') return <div className="hc-line"><b>Collected · unpack</b><span className="muted">{j.job_items?.[0]?.count || 0} pieces</span></div>
+    const n = daysUntil(j.collection_date)
+    return (
+      <>
+        <div className="hc-line"><b>Pack up · {fmtDate(j.collection_date)}</b> <span className={n < 0 ? 'warn-text' : 'muted'}>{n < 0 ? `${-n}d ago` : n === 0 ? 'today' : n === 1 ? 'tomorrow' : `${n} days`}</span></div>
+        <div className="hc-sub">{j.job_items?.[0]?.count || 0} pieces on the list{j.sold_date ? ` · SOLD ${fmtDate(j.sold_date)}` : ''}</div>
+      </>
+    )
+  }
+
+  const urgent = (j, col) => (col === 'out' && daysUntil(j.end) <= 7) || (col === 'packup' && j.status !== 'collected' && daysUntil(j.collection_date) <= 2)
+  const sheetCol = sheet && columnOf(sheet)
 
   return (
     <div className="houses-page stack">
@@ -92,54 +158,28 @@ export default function Houses() {
           <Link className="btn btn-primary" to="/jobs/new">+ New house</Link>
         </div>
       </div>
+      <p className="small muted hide-sm">Drag a house between columns to move it along, or tap it for options.</p>
 
       <div className="board">
-        <Column title="Out & end dates" count={out.length}>
-          {out.length === 0 && <p className="muted small">No houses out without a pack-up booked.</p>}
-          {out.map((j) => {
-            const d = daysUntil(j.end)
-            return (
-              <Card key={j.id} j={j} urgent={d !== null && d <= 7} onClick={() => setSheet({ j, col: 'out' })}>
-                <div className="hc-line"><b>Ends {fmtDate(j.end)}</b> <span className={d <= 7 ? 'warn-text' : 'muted'}>{d < 0 ? `${-d}d over` : d === 0 ? 'today' : `${d} days`}</span></div>
-                <div className="hc-sub">Installed {fmtDate(j.install_date)} · {j.hire_weeks} wks{j.sold_date ? ` · SOLD ${fmtDate(j.sold_date)}` : ''}</div>
-                <Pay j={j} />
-              </Card>
-            )
-          })}
-        </Column>
-
-        <Column title="Pack ups" count={packUps.length}>
-          {packUps.length === 0 && <p className="muted small">No pack-ups booked. Tap a house that’s out to book one.</p>}
-          {packUps.map(({ j, date: d, what, kind }) => {
-            const n = daysUntil(d)
-            return (
-              <Card key={`${j.id}${kind}`} j={j} urgent={kind === 'collect' && n <= 2} onClick={() => setSheet({ j, col: kind })}>
-                <div className="hc-line"><b>{what} · {fmtDate(d)}</b> <span className={n < 0 ? 'warn-text' : 'muted'}>{n < 0 ? `${-n}d ago` : n === 0 ? 'today' : n === 1 ? 'tomorrow' : `${n} days`}</span></div>
-                <div className="hc-sub">{j.job_items?.[0]?.count || 0} pieces on the list</div>
-              </Card>
-            )
-          })}
-        </Column>
-
-        <Column title="Booked, coming up" count={coming.length}>
-          {coming.length === 0 && <p className="muted small">Nothing booked yet.</p>}
-          {coming.map((j) => (
-            <Card key={j.id} j={j} onClick={() => nav(`/jobs/${j.id}`)}>
-              <div className="hc-line"><b>{j.install_date ? `Install ${fmtDate(j.install_date)}` : 'No install date yet'}</b></div>
-              {j.pack_date && <div className="hc-sub">Pack {fmtDate(j.pack_date)}</div>}
-              <Pay j={j} />
-            </Card>
-          ))}
-        </Column>
-
-        <Column title="Quote stage" count={quotes.length}>
-          {quotes.length === 0 && <p className="muted small">No open quotes.</p>}
-          {quotes.map((j) => (
-            <Card key={j.id} j={j} onClick={() => nav(`/jobs/${j.id}`)}>
-              <div className="hc-sub">{j.clients?.name || 'No client set'}</div>
-            </Card>
-          ))}
-        </Column>
+        {COLS.map(([col, title]) => (
+          <section key={col} className={`board-col ${over === col ? 'drop-over' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); if (over !== col) setOver(col) }}
+            onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOver(null) }}
+            onDrop={onDrop(col)}>
+            <h2 className="board-h">{title} <span>{by[col].length}</span></h2>
+            {by[col].length === 0 && <p className="muted small">{{ quote: 'No open quotes.', booked: 'Nothing booked yet.', out: 'No houses out.', packup: 'No pack-ups booked.' }[col]}</p>}
+            {by[col].map((j) => (
+              <button key={j.id} type="button" draggable
+                onDragStart={(e) => { setDragId(j.id); e.dataTransfer.setData('text/plain', j.id); e.dataTransfer.effectAllowed = 'move' }}
+                onDragEnd={() => { setDragId(null); setOver(null) }}
+                onClick={() => setSheet(j)}
+                className={`house-card ${urgent(j, col) ? 'urgent' : ''} ${dragId === j.id ? 'dragging' : ''}`}>
+                <div className="hc-addr">{j.property_address}</div>
+                {cardBody(j, col)}
+              </button>
+            ))}
+          </section>
+        ))}
       </div>
 
       {recent.length > 0 && (
@@ -152,32 +192,42 @@ export default function Houses() {
       )}
 
       {sheet && (
-        <Modal title={sheet.j.property_address} onClose={() => setSheet(null)}>
+        <Modal title={sheet.property_address} onClose={() => setSheet(null)}>
           <div className="stack action-sheet">
-            {sheet.col === 'out' && (
+            {sheetCol === 'out' && (
               <>
-                <p className="muted small">Hire ends {fmtLong(hireEnd(sheet.j))}</p>
-                <button className="btn btn-primary btn-big btn-block" onClick={() => askDate(sheet.j)}>Move to pack up</button>
-                <button className="btn btn-big btn-block" onClick={() => askSold(sheet.j)}>{sheet.j.sold_date ? `Sold ${fmtDate(sheet.j.sold_date)} · edit` : 'Property sold'}</button>
+                <p className="muted small">Hire ends {fmtLong(hireEnd(sheet))}</p>
+                <button className="btn btn-primary btn-big btn-block" onClick={() => askDate(sheet, 'collection_date')}>Move to pack up</button>
+                <button className="btn btn-big btn-block" onClick={() => askSold(sheet)}>{sheet.sold_date ? `Sold ${fmtDate(sheet.sold_date)} · edit` : 'Property sold'}</button>
               </>
             )}
-            {sheet.col === 'collect' && (
+            {sheetCol === 'packup' && sheet.status !== 'collected' && (
               <>
-                <p className="muted small">Pack up {fmtLong(sheet.j.collection_date)}</p>
-                <button className="btn btn-primary btn-big btn-block" onClick={() => nav(`/pick/${sheet.j.id}`)}>Open pick list</button>
-                <button className="btn btn-big btn-block" onClick={() => askDate(sheet.j)}>Change pack-up date</button>
-                <button className="btn btn-big btn-block" onClick={() => askSold(sheet.j)}>{sheet.j.sold_date ? `Sold ${fmtDate(sheet.j.sold_date)} · edit` : 'Property sold'}</button>
-                <button className="btn btn-big btn-block" disabled={busy} onClick={() => update(sheet.j, { status: 'collected' }, 'Marked collected')}>Mark collected</button>
-                <button className="btn btn-ghost btn-block" disabled={busy} onClick={() => update(sheet.j, { collection_date: null }, 'Pack-up removed, back to out')}>Cancel pack-up</button>
+                <p className="muted small">Pack up {fmtLong(sheet.collection_date)}</p>
+                <button className="btn btn-primary btn-big btn-block" onClick={() => nav(`/pick/${sheet.id}`)}>Open pick list</button>
+                <button className="btn btn-big btn-block" onClick={() => askDate(sheet, 'collection_date')}>Change pack-up date</button>
+                <button className="btn btn-big btn-block" onClick={() => askSold(sheet)}>{sheet.sold_date ? `Sold ${fmtDate(sheet.sold_date)} · edit` : 'Property sold'}</button>
+                <button className="btn btn-big btn-block" disabled={busy} onClick={() => update(sheet, { status: 'collected' }, 'Marked collected')}>Mark collected</button>
               </>
             )}
-            {(sheet.col === 'pack' || sheet.col === 'unpack') && (
-              <button className="btn btn-primary btn-big btn-block" onClick={() => nav(`/pick/${sheet.j.id}`)}>Open pick list</button>
+            {sheetCol === 'packup' && sheet.status === 'collected' && (
+              <>
+                <button className="btn btn-primary btn-big btn-block" onClick={() => nav(`/pick/${sheet.id}`)}>Open unpack list</button>
+                <button className="btn btn-big btn-block" disabled={busy} onClick={() => update(sheet, { status: 'complete' }, 'Back in shed, all done')}>Mark unpacked &amp; done</button>
+              </>
             )}
-            {sheet.col === 'unpack' && (
-              <button className="btn btn-big btn-block" disabled={busy} onClick={() => update(sheet.j, { status: 'complete' }, 'Back in shed, all done')}>Mark unpacked & done</button>
+            {sheetCol === 'booked' && (
+              <button className="btn btn-primary btn-big btn-block" onClick={() => nav(`/pick/${sheet.id}`)}>Open pick list</button>
             )}
-            <button className="btn btn-big btn-block" onClick={() => nav(`/jobs/${sheet.j.id}`)}>View house details</button>
+            <button className="btn btn-big btn-block" onClick={() => nav(`/jobs/${sheet.id}`)}>View house details</button>
+            <div className="move-row">
+              <span className="small muted">Move to</span>
+              <div className="chips">
+                {COLS.filter(([c]) => c !== sheetCol).map(([c, l]) => (
+                  <button key={c} className="chip" disabled={busy} onClick={() => moveTo(sheet, c)}>{l}</button>
+                ))}
+              </div>
+            </div>
           </div>
         </Modal>
       )}
@@ -204,46 +254,31 @@ export default function Houses() {
       )}
 
       {dateFor && (
-        <Modal title="Pick a pack-up date" onClose={() => setDateFor(null)}>
+        <Modal title={dateFor.field === 'install_date' ? 'When was it installed?' : 'Pick a pack-up date'} onClose={() => setDateFor(null)}>
           <div className="stack">
-            <p><strong>{dateFor.property_address}</strong><br /><span className="muted small">Hire ends {fmtLong(hireEnd(dateFor))}</span></p>
-            <Field label="Pack-up day">
+            <p><strong>{dateFor.j.property_address}</strong><br />
+              <span className="muted small">{dateFor.field === 'install_date' ? `${dateFor.j.hire_weeks} week hire starts from this day` : `Hire ends ${fmtLong(hireEnd(dateFor.j))}`}</span></p>
+            <Field label={dateFor.field === 'install_date' ? 'Install day' : 'Pack-up day'}>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
             <div className="chips">
-              {[['Hire end', hireEnd(dateFor)], ['Today', t], ['Tomorrow', addDays(t, 1)]].filter(([, v]) => v).map(([l, v]) => (
+              {(dateFor.field === 'install_date'
+                ? [['Today', t], ['Yesterday', addDays(t, -1)]]
+                : [['Hire end', hireEnd(dateFor.j)], ['Today', t], ['Tomorrow', addDays(t, 1)]]
+              ).filter(([, v]) => v).map(([l, v]) => (
                 <button key={l} className={`chip ${date === v ? 'on' : ''}`} onClick={() => setDate(v)}>{l} · {fmtDate(v)}</button>
               ))}
             </div>
             <div className="row">
               <button className="btn btn-ghost" onClick={() => setDateFor(null)}>Cancel</button>
-              <button className="btn btn-primary grow btn-big" disabled={!date || busy}
-                onClick={() => update(dateFor, { collection_date: date }, `Pack up booked for ${fmtDate(date)}`)}>
-                Book pack up
+              <button className="btn btn-primary grow btn-big" disabled={!date || busy} onClick={saveDate}>
+                {dateFor.field === 'install_date' ? 'Move to out' : 'Book pack up'}
               </button>
             </div>
           </div>
         </Modal>
       )}
     </div>
-  )
-}
-
-function Column({ title, count, children }) {
-  return (
-    <section className="board-col">
-      <h2 className="board-h">{title} <span>{count}</span></h2>
-      {children}
-    </section>
-  )
-}
-
-function Card({ j, urgent, children, onClick }) {
-  return (
-    <button type="button" onClick={onClick} className={`house-card ${urgent ? 'urgent' : ''}`}>
-      <div className="hc-addr">{j.property_address}</div>
-      {children}
-    </button>
   )
 }
 

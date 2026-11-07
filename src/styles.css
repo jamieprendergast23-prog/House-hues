@@ -533,3 +533,8 @@ button.house-card { width: 100%; text-align: left; font: inherit; cursor: pointe
   .result-card, .stat { border-color: #ccc; }
 }
 .di-row { gap: 10px; } .di-row select { max-width: 130px; }
+.board-col.drop-over { outline: 2px dashed var(--ink); outline-offset: -4px; background: #e3ded6; }
+.house-card[draggable] { cursor: grab; }
+.house-card.dragging { opacity: .4; }
+.move-row { border-top: 1px solid var(--line); padding-top: 10px; }
+.move-row .chips { margin-top: 6px; flex-wrap: wrap; }
