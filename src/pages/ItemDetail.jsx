@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase, friendlyError, fetchAll, naturalCompare } from '../lib/supabase'
-import { CATEGORIES, CONDITIONS, ITEM_STATUS } from '../lib/constants'
-import { fmtDate, compressImage } from '../lib/format'
+import { CATEGORIES, CONDITIONS, ITEM_STATUS, UNPLACED } from '../lib/constants'
+import { fmtDate, compressImage, hireEnd } from '../lib/format'
 import { toast } from '../lib/toast'
 import { QrImg, Thumb, ItemWhere, Field, Loading, Empty } from '../components/ui'
 import DamagePanel from '../components/DamagePanel'
@@ -46,7 +46,7 @@ export default function ItemDetail({ byCode }) {
       const [c, h] = await Promise.all([
         supabase.from('item_costs').select('*').eq('item_id', data.id).maybeSingle(),
         supabase.from('job_items')
-          .select('id, room, packed_at, returned_at, period, jobs(id, job_number, property_address, status)')
+          .select('id, room, packed_at, returned_at, period, jobs(id, job_number, property_address, status, type, install_date, collection_date, hire_weeks, hire_end_date)')
           .eq('item_id', data.id).order('created_at', { ascending: false }),
       ])
       setCosts(c.data || {})
@@ -233,7 +233,7 @@ export default function ItemDetail({ byCode }) {
 
       <DamagePanel item={item} onChange={(f) => setItem({ ...item, ...f })} />
 
-      <h2>House history</h2>
+      <h2>History</h2>
       {history.length === 0 ? <Empty>Not used in a house yet.</Empty> : (
         <ul className="list">
           {history.map((h) => (
@@ -241,7 +241,8 @@ export default function ItemDetail({ byCode }) {
               <Link className="list-row" to={`/jobs/${h.jobs.id}`}>
                 <div className="grow">
                   <div className="row-title">{h.jobs.property_address}</div>
-                  <div className="row-sub">#{h.jobs.job_number} · {h.room} · {h.returned_at ? 'Returned' : h.packed_at ? 'Out now' : 'Booked'}</div>
+                  <div className="row-sub">{histDates(h)}</div>
+                  <div className="row-sub">{h.room === UNPLACED ? 'Room not chosen' : h.room} · {h.returned_at ? 'Back in shed' : h.packed_at ? 'Out now' : 'Booked'}</div>
                 </div>
               </Link>
             </li>
@@ -260,4 +261,13 @@ export default function ItemDetail({ byCode }) {
       </div>
     </div>
   )
+}
+
+// when the piece was at the house: actual pack/return days if known, else the booked dates
+function histDates(h) {
+  const j = h.jobs || {}
+  const from = h.packed_at?.slice(0, 10) || j.install_date
+  const to = h.returned_at?.slice(0, 10) || j.collection_date || (j.install_date && j.type === 'staging' ? hireEnd(j) : null)
+  if (!from) return 'No dates yet'
+  return to ? `${fmtDate(from)} to ${fmtDate(to)}` : `From ${fmtDate(from)}`
 }
