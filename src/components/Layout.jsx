@@ -12,7 +12,7 @@ const NAV = ERP ? [
   ['/calendar', 'Calendar', '▣'],
   ['/requests', 'Requests', '✉'],
 ] : [
-  ['/', 'Overview', '◎'],
+  ['/', 'Dashboard', '◎'],
   ['/inventory', 'Stock', '▦'],
   ['/houses', 'Houses', '⌂'],
   ['/calendar', 'Calendar', '▣'],
@@ -40,7 +40,6 @@ export default function Layout({ children }) {
               {label}{to === '/requests' && newCount > 0 && <b className="badge">{newCount}</b>}
             </NavLink>
           ))}
-          {!ERP && <NavLink to="/dashboard">Dashboard</NavLink>}
           <NavLink to="/team">Team</NavLink>
         </nav>
         <div className="topbar-actions">

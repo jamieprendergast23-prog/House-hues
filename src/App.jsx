@@ -13,7 +13,6 @@ import FieldLayout from './field/FieldLayout'
 import Login from './pages/Login'
 import Book from './pages/Book'
 import Dashboard from './pages/Dashboard'
-import StockHome from './pages/StockHome'
 import ImportStock from './pages/ImportStock'
 import Inventory from './pages/Inventory'
 import ItemDetail from './pages/ItemDetail'
@@ -67,7 +66,7 @@ function Protected() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={ERP ? <Dashboard /> : <StockHome />} />
+        <Route path="/" element={ERP ? <Dashboard /> : <Dashboard2 />} />
         <Route path="/import" element={<ImportStock />} />
         <Route path="/inventory" element={<Inventory />} />
         <Route path="/inventory/:id" element={<ItemDetail />} />
@@ -78,7 +77,7 @@ function Protected() {
         {(ERP || PLANNER) && <Route path="/calendar" element={<CalendarPage />} />}
         <Route path="/houses" element={<Houses />} />
         <Route path="/business" element={<Business />} />
-        <Route path="/dashboard" element={<Dashboard2 />} />
+        <Route path="/dashboard" element={<Navigate to="/" replace />} />
         {ERP && <Route path="/requests" element={<Requests />} />}
         <Route path="/team" element={<Team />} />
         <Route path="/pick/:jobId" element={<PickList />} />

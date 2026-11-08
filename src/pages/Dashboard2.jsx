@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase, fetchAll, friendlyError } from '../lib/supabase'
 import { today, addDays, hireEnd, parseDate, toISO } from '../lib/format'
 import { toast } from '../lib/toast'
 import { Loading } from '../components/ui'
+import Scanner from '../components/Scanner'
 import { jobEvents } from './Calendar'
 import { columnOf } from './Houses'
 
@@ -41,6 +42,8 @@ function Tile({ icon, tone, title, badge, badgeTone = 'ok', to, action, children
 
 export default function Dashboard2() {
   const [d, setD] = useState(null)
+  const [scan, setScan] = useState(false)
+  const nav = useNavigate()
 
   const load = () => Promise.all([
     fetchAll(() => supabase.from('jobs').select('*, clients(name), job_finance(*)').order('created_at')),
@@ -120,6 +123,13 @@ export default function Dashboard2() {
       <div className="page-head">
         <h1>Dashboard</h1>
         <span className="small muted">{parseDate(s.t).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+      </div>
+
+      <div className="quick">
+        <button className="quick-btn primary" onClick={() => setScan(true)}><span>⌗</span>Scan</button>
+        <Link className="quick-btn" to="/inventory/new"><span>＋</span>Add item</Link>
+        <Link className="quick-btn" to="/jobs/new"><span>⌂</span>New house</Link>
+        <Link className="quick-btn" to="/import"><span>⇪</span>Import list</Link>
       </div>
 
       <div className="tiles">
@@ -207,6 +217,7 @@ export default function Dashboard2() {
         </Tile>
 
       </div>
+      {scan && <Scanner onClose={() => setScan(false)} onCode={(code) => { setScan(false); nav(`/i/${code}`) }} />}
     </div>
   )
 }
