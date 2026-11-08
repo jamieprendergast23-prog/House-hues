@@ -7,6 +7,7 @@ import { toCSV, downloadText } from '../lib/csv'
 import { fmtDate } from '../lib/format'
 import { Loading, Empty, Modal, ItemWhere, ConditionPill } from '../components/ui'
 import Scanner from '../components/Scanner'
+import Icon from '../components/Icon'
 
 const WHERE = [['all', 'All'], ['in', 'In shed'], ['out', 'Out on jobs'], ['repair', 'Repair'], ['retired', 'Retired']]
 const PAGE = 120 // tiles rendered at a time; "Show more" for the rest
@@ -141,8 +142,8 @@ export default function Inventory() {
         <h1>Stock <span className="muted small">{groups.length} items · {shownPieces.length} pieces{shownPieces.length !== live ? ` of ${live}` : ''}</span></h1>
         <div className="row">
           <div className="seg view-toggle" role="group" aria-label="View">
-            <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Photo view">▦ Photos</button>
-            <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="List view">☰ List</button>
+            <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')} aria-label="Photo view"><Icon name="grid" size={16} /> Photos</button>
+            <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')} aria-label="List view"><Icon name="list" size={16} /> List</button>
           </div>
           <button className="btn" onClick={() => setScan(true)}>Scan</button>
           <Link className="btn btn-primary" to="/inventory/new">+ Add<span className="hide-sm"> item</span></Link>
@@ -201,7 +202,7 @@ export default function Inventory() {
             {groups.slice(0, limit).map((g) => (
               <li key={g.key}>
                 <button className={`sl-row ${picking && picked.has(g.key) ? 'picked' : ''}`} onClick={() => (picking ? togglePick(g) : openGroup(g))}>
-                  {picking && <span className="sl-check">{picked.has(g.key) ? '✓' : ''}</span>}
+                  {picking && <span className="sl-check">{picked.has(g.key) && <Icon name="check" size={14} stroke={2.4} />}</span>}
                   {g.photo ? <img className="sl-img" src={g.photo} alt="" loading="lazy" /> : <span className="sl-img sl-noimg">{g.sku || ''}</span>}
                   <span className="sl-main">
                     <span className="sl-name">{g.name}</span>
@@ -225,7 +226,7 @@ export default function Inventory() {
                 <div className="tile-img">
                   {g.photo ? <img src={g.photo} alt="" loading="lazy" /> : <span className={`tile-code ${(g.sku || g.name).length > 6 ? 'long' : ''}`}>{g.sku || g.name}</span>}
                   {g.pieces.length > 1 && <span className="tile-qty">×{g.pieces.length}</span>}
-                  {picking && <span className="tile-check">{picked.has(g.key) ? '✓' : ''}</span>}
+                  {picking && <span className="tile-check">{picked.has(g.key) && <Icon name="check" size={14} stroke={2.4} />}</span>}
                 </div>
                 <div className="tile-body">
                   <div className="tile-name">{g.name}</div>

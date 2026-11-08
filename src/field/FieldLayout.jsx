@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { toast } from '../lib/toast'
 import { Modal, Brand } from '../components/ui'
+import Icon from '../components/Icon'
 
 export default function FieldLayout({ children }) {
   const { hasMain, setFieldMode, profile } = useAuth()
@@ -22,7 +23,7 @@ export default function FieldLayout({ children }) {
     <div className="app field">
       <header className="field-top">
         <NavLink to="/" className="brand-link"><Brand /></NavLink>
-        <button className="btn btn-ghost-light" onClick={() => setMenu(true)}>{profile?.full_name?.split(' ')[0] || 'Menu'} ☰</button>
+        <button className="btn btn-ghost-light" onClick={() => setMenu(true)}>{profile?.full_name?.split(' ')[0] || 'Menu'} <Icon name="menu" size={18} /></button>
       </header>
       <main className="field-main">{children}</main>
       <nav className="field-bar">

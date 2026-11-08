@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { ITEM_STATUS, CONDITIONS, statusLabel, TYPE_LABEL } from '../lib/constants'
+import Icon from './Icon'
 
 export const itemUrl = (code) => import.meta.env.VITE_DEMO === '1'
   ? `${window.location.href.split('#')[0]}#/i/${code}`
@@ -18,7 +19,7 @@ export function QrImg({ code, size = 160 }) {
 export function Thumb({ url, size = 56 }) {
   return url
     ? <img className="thumb" src={url} width={size} height={size} alt="" loading="lazy" />
-    : <div className="thumb thumb-empty" style={{ width: size, height: size }}>◻</div>
+    : <div className="thumb thumb-empty" style={{ width: size, height: size }}><Icon name="image" size={Math.round(size * 0.4)} /></div>
 }
 
 export function ItemWhere({ item }) {
@@ -66,7 +67,7 @@ export function Modal({ title, onClose, children, wide }) {
       <div className={`modal ${wide ? 'modal-wide' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h3>{title}</h3>
-          <button className="btn btn-ghost" onClick={onClose} aria-label="Close">✕</button>
+          <button className="btn btn-ghost" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
         </div>
         {children}
       </div>

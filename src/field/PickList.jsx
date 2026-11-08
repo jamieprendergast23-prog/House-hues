@@ -7,6 +7,7 @@ import { Loading, Empty, Modal } from '../components/ui'
 import Scanner from '../components/Scanner'
 import PhotoViewer from '../components/PhotoViewer'
 import { installStep } from '../lib/installOrder'
+import Icon from '../components/Icon'
 
 // pack   = at the shed, loading for install
 // load   = at the house on pack-up day, loading the truck (the pack-up check)
@@ -102,14 +103,14 @@ export default function PickList() {
     const r = data.result
     const label = data.sku ? `${data.sku} ${data.name}` : data.name
     const msg = {
-      packed: [true, `✓ ${label} → ${data.room}`],
-      loaded: [true, `✓ ${label} on the truck (${data.room})`],
+      packed: [true, `${label} → ${data.room}`],
+      loaded: [true, `${label} on the truck (${data.room})`],
       already: [true, `${label} already ticked`],
-      returned: [true, `✓ ${label} back in shed`],
-      not_on_list: [false, `✕ ${label} is NOT on this job. Leave it.`],
-      not_from_here: [false, `✕ ${label} isn’t from this house${data.other ? `. It should be at ${data.other}` : ''}.`],
+      returned: [true, `${label} back in shed`],
+      not_on_list: [false, `${label} is NOT on this job. Leave it.`],
+      not_from_here: [false, `${label} isn’t from this house${data.other ? `. It should be at ${data.other}` : ''}.`],
       not_out: [false, `${label} wasn’t marked as out`],
-      unknown_code: [false, `✕ Code ${code} not found`],
+      unknown_code: [false, `Code ${code} not found`],
     }[r] || [false, r]
     if (!msg[0]) navigator.vibrate?.([80, 60, 80])
     setLast({ ok: msg[0], text: msg[1] })
@@ -122,7 +123,7 @@ export default function PickList() {
     setBusy(false)
     if (error) return toast(friendlyError(error), 'error')
     setFinishing(false); setMissingNote('')
-    toast(data.missing ? `Pack up done. ${data.missing} marked missing and flagged to Hayley.` : `Pack up done, all ${done} pieces on the truck ✓`)
+    toast(data.missing ? `Pack up done. ${data.missing} marked missing and flagged to Hayley.` : `Pack up done, all ${done} pieces on the truck`)
     await load()
     setMode('return')
   }
@@ -139,7 +140,7 @@ export default function PickList() {
           {job.install_date && <>Install {fmtDate(job.install_date)} · </>}
           {(job.collection_date || end) && <>Pack up {fmtDate(job.collection_date || end)}</>}
         </p>
-        {job.access_notes && <div className="access">🔑 {job.access_notes}</div>}
+        {job.access_notes && <div className="access"><Icon name="key" size={16} /> {job.access_notes}</div>}
       </div>
 
       <div className="seg seg-big">
@@ -155,7 +156,7 @@ export default function PickList() {
       <div className="progress-head">
         <div className="progress progress-big"><i style={{ width: `${visible.length ? (done / visible.length) * 100 : 0}%` }} /></div>
         <strong>{done} / {visible.length}</strong> {cfg.done}
-        {visible.length > 0 && done === visible.length && <div className="all-done">All done ✓</div>}
+        {visible.length > 0 && done === visible.length && <div className="all-done"><Icon name="check" size={18} stroke={2.2} /> All done</div>}
       </div>
 
       <div className="row">
@@ -197,7 +198,7 @@ export default function PickList() {
                 <span>{l.items.sku ? `${l.items.sku} · ` : ''}{l.items.code}{l.items.colour ? ` · ${l.items.colour}` : ''}</span>
                 <span>{l.missing_at && !l.returned_at ? <b className="warn-text">Marked missing</b> : sort === 'room' ? `Shed: ${l.items.shed_location || '—'}` : sort === 'install' ? `${l.room} · Shed: ${l.items.shed_location || '—'}` : `Room: ${l.room}`}</span>
               </span>
-              <span className="pick-check">{doneOf(l) ? '✓' : ''}</span>
+              <span className="pick-check">{doneOf(l) && <Icon name="check" size={18} stroke={2.4} />}</span>
             </button>
           ))}
         </section>
@@ -208,7 +209,7 @@ export default function PickList() {
       <div className="fab-stack">
         {mode === 'load' && visible.length > 0 && (
           <button className="fab fab-finish" onClick={() => setFinishing(true)}>
-            Finish pack up{notLoaded.length ? ` (${notLoaded.length} not loaded)` : ' ✓'}
+            Finish pack up{notLoaded.length ? ` (${notLoaded.length} not loaded)` : ''}
           </button>
         )}
         <button className="fab" onClick={() => { setLast(null); setScan(true) }}>{cfg.scan}</button>
@@ -218,7 +219,7 @@ export default function PickList() {
         <Modal title={notLoaded.length ? `${notLoaded.length} not on the truck` : 'Everything’s on the truck'} onClose={() => setFinishing(false)}>
           {notLoaded.length === 0 ? (
             <div className="stack">
-              <p>All {done} pieces from {job.property_address} are loaded. 👍</p>
+              <p>All {done} pieces from {job.property_address} are loaded.</p>
               <button className="btn btn-primary btn-big btn-block" disabled={busy} onClick={finish}>Finish pack up</button>
             </div>
           ) : (
@@ -250,7 +251,7 @@ export default function PickList() {
 
       {scan && (
         <Scanner continuous title={cfg.scanTitle} onClose={() => setScan(false)} onCode={onScan}>
-          {last && <div className={`scan-result ${last.ok ? 'ok' : 'bad'}`}>{last.text}</div>}
+          {last && <div className={`scan-result ${last.ok ? 'ok' : 'bad'}`}><Icon name={last.ok ? 'check' : 'close'} size={20} stroke={2.4} /> {last.text}</div>}
           <div className="scan-count">{done} / {visible.length}</div>
         </Scanner>
       )}

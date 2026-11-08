@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth'
 import Scanner from '../components/Scanner'
 import { jobEvents } from './Calendar'
 import { columnOf } from './Houses'
+import Icon from '../components/Icon'
 
 const WON = new Set(['accepted', 'booked', 'packing', 'installed', 'collected', 'complete', 'paid', 'consult_booked', 'follow_up_sent', 'in_progress'])
 const cash = (n) => Number(n || 0).toLocaleString('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 })
@@ -15,17 +16,6 @@ const short = (iso) => parseDate(iso).toLocaleDateString('en-AU', { weekday: 'sh
 const price = (j) => Number(j.job_finance?.quote_amount) || 0
 const got = (j) => { const f = j.job_finance; return !f ? 0 : f.paid_in_full_on ? Number(f.quote_amount) || 0 : f.deposit_paid_on ? Number(f.deposit_amount) || 0 : 0 }
 
-// small line icons, drawn in the tile's ink colour
-const I = {
-  cal: <path d="M7 3v3M17 3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" />,
-  house: <path d="M4 11l8-7 8 7M6 10v10h12V10M10 20v-5h4v5" />,
-  box: <path d="M4 8l8-4 8 4-8 4-8-4zm0 0v8l8 4 8-4V8M12 12v8" />,
-  money: <path d="M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6 10v4M18 10v4" />,
-  bell: <path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4l2-2zM10 20a2 2 0 0 0 4 0" />,
-}
-const Icon = ({ name }) => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{I[name]}</svg>
-)
 
 function Tile({ icon, tone, title, badge, badgeTone = 'ok', to, action, children }) {
   return (
@@ -128,16 +118,16 @@ export default function Dashboard2() {
       </div>
 
       <div className="quick">
-        {can('stock') && <button className="quick-btn primary" onClick={() => setScan(true)}><span>⌗</span>Scan</button>}
-        {can('stock') && <Link className="quick-btn" to="/inventory/new"><span>＋</span>Add item</Link>}
-        {can('houses') && <Link className="quick-btn" to="/jobs/new"><span>⌂</span>New house</Link>}
-        {can('stock') && <Link className="quick-btn" to="/import"><span>⇪</span>Import list</Link>}
-        {isAdmin && <Link className="quick-btn" to="/team"><span>☺</span>Team</Link>}
+        {can('stock') && <button className="quick-btn primary" onClick={() => setScan(true)}><Icon name="scan" size={24} />Scan</button>}
+        {can('stock') && <Link className="quick-btn" to="/inventory/new"><Icon name="plus" size={24} />Add item</Link>}
+        {can('houses') && <Link className="quick-btn" to="/jobs/new"><Icon name="house" size={24} />New house</Link>}
+        {can('stock') && <Link className="quick-btn" to="/import"><Icon name="import" size={24} />Import list</Link>}
+        {isAdmin && <Link className="quick-btn" to="/team"><Icon name="team" size={24} />Team</Link>}
       </div>
 
       <div className="tiles">
         {can('calendar') && (
-          <Tile icon="cal" tone="t-rose" title="Calendar" to="/calendar" action="Open Calendar"
+          <Tile icon="calendar" tone="t-rose" title="Calendar" to="/calendar" action="Open Calendar"
             badge={s.todayCount ? `${s.todayCount} today` : s.weekCount ? `${s.weekCount} this week` : null} badgeTone="info">
             {s.events.length === 0 ? <p className="tc-empty">Nothing coming up.</p> : s.events.map((e, i) => (
               <Link key={i} to={`/jobs/${e.job.id}`} className="tc-row">
@@ -175,7 +165,7 @@ export default function Dashboard2() {
         )}
 
         {can('stock') && (
-          <Tile icon="box" tone="t-sand" title="Stock" to="/inventory" action="Open Stock"
+          <Tile icon="stock" tone="t-sand" title="Stock" to="/inventory" action="Open Stock"
             badge={s.missing ? `${s.missing} missing` : s.repair ? `${s.repair} to repair` : null} badgeTone={s.missing ? 'urgent' : 'warn'}>
             <div className="tc-row tc-col tc-hero">
               <b>{s.out} of {s.pieces}</b>

@@ -5,6 +5,7 @@ import { toast } from '../lib/toast'
 import { PERMS } from '../lib/constants'
 import { Field, Loading } from '../components/ui'
 import MailConnect from '../components/MailConnect'
+import Icon from '../components/Icon'
 
 /** Tick boxes for the areas a person can use. */
 function AccessPicker({ value, onChange, disabled }) {
@@ -77,7 +78,7 @@ export default function Team() {
                   <div className="row-title">{p.full_name || 'Unnamed'}{me ? ' (you)' : ''}</div>
                   <div className="row-sub">{summary(p)}</div>
                 </div>
-                <span className="muted">{isOpen ? '▲' : '▼'}</span>
+                <span className="muted"><Icon name={isOpen ? 'up' : 'down'} size={18} /></span>
               </button>
               {isOpen && (
                 <div className="stack" style={{ marginTop: 10 }}>

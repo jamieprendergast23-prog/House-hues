@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { mail, mailStatus, textToHtml } from '../lib/mail'
 import { toast } from '../lib/toast'
 import { Modal, Loading, Field } from './ui'
+import Icon from './Icon'
 
 const who = (r) => r?.emailAddress?.name || r?.emailAddress?.address || ''
 const when = (iso) => {
@@ -62,7 +63,7 @@ export default function BookingEmails({ job, client }) {
       <div className="row between">
         <h2>Emails</h2>
         <div className="row">
-          <button type="button" className="btn btn-small btn-ghost" onClick={load} aria-label="Refresh">↻</button>
+          <button type="button" className="btn btn-small btn-ghost" onClick={load} aria-label="Refresh"><Icon name="refresh" size={18} /></button>
           <button type="button" className="btn btn-small btn-primary" onClick={() => setCompose(true)}>New email</button>
         </div>
       </div>
@@ -135,7 +136,7 @@ function Thread({ conversationId, onClose }) {
                 <b>{who(m.from)}</b>
                 <span className="muted">{new Date(m.receivedDateTime).toLocaleString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</span>
               </div>
-              <div className="small muted">To {(m.toRecipients || []).map(who).join(', ')}{m.hasAttachments ? ' · 📎 has attachments (open in Outlook)' : ''}</div>
+              <div className="small muted">To {(m.toRecipients || []).map(who).join(', ')}{m.hasAttachments ? ' · has attachments (open in Outlook)' : ''}</div>
               <MailBody html={m.body?.content || ''} />
             </article>
           ))}

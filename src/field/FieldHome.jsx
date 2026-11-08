@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { today, addDays, fmtDate, hireEnd } from '../lib/format'
 import { Loading, Empty } from '../components/ui'
+import Icon from '../components/Icon'
 
 const ACTIVE = ['accepted', 'booked', 'packing', 'installed', 'collected']
 
@@ -41,7 +42,7 @@ export default function FieldHome() {
   return (
     <div className="stack">
       <Link to="/scan" className="big-action">
-        <span className="big-action-icon">⌗</span>
+        <span className="big-action-icon"><Icon name="scan" size={34} /></span>
         <span>Scan an item</span>
       </Link>
 

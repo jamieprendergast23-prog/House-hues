@@ -5,6 +5,7 @@ import { fmtDate } from '../lib/format'
 import { toast } from '../lib/toast'
 import { Modal, Loading, Empty, Field } from './ui'
 import Scanner from './Scanner'
+import Icon from './Icon'
 
 /**
  * Pick furniture for a house, by look. Shows all available stock. If the house has
@@ -126,7 +127,7 @@ export default function StockPicker({ jobId, onClose, initialRoom }) {
               <div key={g.key} className={`pg-tile ${n ? 'on' : ''}`}>
                 <button type="button" className="pg-img" onClick={() => setCount(g, n ? 0 : 1)}>
                   {g.photo ? <img src={g.photo} alt="" loading="lazy" /> : <span className="tile-code">{g.sku || g.name}</span>}
-                  {n > 0 && <span className="pg-check">✓</span>}
+                  {n > 0 && <span className="pg-check"><Icon name="check" size={14} stroke={2.4} /></span>}
                   <span className="pg-free">{g.pieces.length} available</span>
                 </button>
                 <div className="pg-body">

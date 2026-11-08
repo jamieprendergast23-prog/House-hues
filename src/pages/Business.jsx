@@ -183,7 +183,7 @@ export default function Business() {
 
         <section className="card">
           <h2>Owed to you</h2>
-          {s.owing.length === 0 ? <p className="small muted">Nothing owed. 🎉</p> : (
+          {s.owing.length === 0 ? <p className="small muted">Nothing owed.</p> : (
             <ul className="list">
               {s.owing.slice(0, 6).map((j) => (
                 <li key={j.id}><Link className="list-row" to={`/jobs/${j.id}`}>

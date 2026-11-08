@@ -790,3 +790,13 @@ input[type=checkbox] { box-shadow: none; }
   .quick-btn, .house-card, .tile-card, a.card, a.stat, .perm, .tile-img, .pg-img { transition: none; }
   a.card:hover, a.stat:hover, .quick-btn:hover, .house-card:hover, .tile-card:hover, .perm:hover { transform: none; }
 }
+
+/* line icons */
+.icon { display: inline-block; vertical-align: middle; flex: none; }
+.quick-btn .icon { margin-bottom: 2px; }
+.bn-icon { display: flex; height: 24px; align-items: center; }
+.seg button .icon { margin-right: 2px; vertical-align: -3px; }
+.thumb-empty { display: grid; place-items: center; color: var(--stone); }
+.access .icon, .all-done .icon { vertical-align: -3px; }
+.pick-check, .sl-check, .tile-check, .pg-check, .step-dot { display: inline-grid; place-items: center; }
+.scan-result .icon { vertical-align: -4px; margin-right: 4px; }

@@ -7,6 +7,7 @@ import { toast } from '../lib/toast'
 import { Thumb, Empty } from './ui'
 import PhotoViewer from './PhotoViewer'
 import DesignImport from './DesignImport'
+import Icon from './Icon'
 
 const roomOrder = (r) => { const k = ROOMS.indexOf(r); return k < 0 ? 50 : k }
 
@@ -95,7 +96,7 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
             <button type="button" className="ps-img" onClick={() => setViewer({ photos: list.map((x) => ({ url: x.url, label: `${room} · ${kind === 'design' ? 'design' : kind === 'after' ? 'styled' : 'before'}` })), start: i })}>
               <img src={p.url} alt="" loading="lazy" />
             </button>
-            <button type="button" className="ps-del" onClick={() => removePhoto(p)} aria-label="Remove photo">✕</button>
+            <button type="button" className="ps-del" onClick={() => removePhoto(p)} aria-label="Remove photo"><Icon name="close" size={14} stroke={2} /></button>
           </div>
         ))}
         <label className={`ps-add ${busy === key ? 'busy' : ''}`}>
@@ -157,7 +158,7 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
                   <option value="">Room…</option>
                   {roomChoices.map((r) => <option key={r}>{r}</option>)}
                 </select>
-                {!l.packed_at && <button type="button" className="btn btn-ghost btn-small" onClick={() => onRemoveLine(l.id)} aria-label="Remove">✕</button>}
+                {!l.packed_at && <button type="button" className="btn btn-ghost btn-small" onClick={() => onRemoveLine(l.id)} aria-label="Remove"><Icon name="close" size={16} /></button>}
               </li>
             ))}
           </ul>

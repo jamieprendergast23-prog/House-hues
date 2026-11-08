@@ -4,20 +4,21 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { ERP } from '../lib/features'
 import { Brand } from './ui'
+import Icon from './Icon'
 
 // [path, label, icon, area needed]
 const ALL_NAV = ERP ? [
-  ['/', 'Home', '⌂', 'dashboard'],
-  ['/jobs', 'Jobs', '▤', 'houses'],
-  ['/inventory', 'Stock', '▦', 'stock'],
-  ['/calendar', 'Calendar', '▣', 'calendar'],
-  ['/requests', 'Requests', '✉', 'admin'],
+  ['/', 'Home', 'dashboard', 'dashboard'],
+  ['/jobs', 'Jobs', 'jobs', 'houses'],
+  ['/inventory', 'Stock', 'stock', 'stock'],
+  ['/calendar', 'Calendar', 'calendar', 'calendar'],
+  ['/requests', 'Requests', 'mail', 'admin'],
 ] : [
-  ['/', 'Dashboard', '◎', 'dashboard'],
-  ['/inventory', 'Stock', '▦', 'stock'],
-  ['/houses', 'Houses', '⌂', 'houses'],
-  ['/calendar', 'Calendar', '▣', 'calendar'],
-  ['/import', 'Import', '⇪', 'stock'],
+  ['/', 'Dashboard', 'dashboard', 'dashboard'],
+  ['/inventory', 'Stock', 'stock', 'stock'],
+  ['/houses', 'Houses', 'house', 'houses'],
+  ['/calendar', 'Calendar', 'calendar', 'calendar'],
+  ['/import', 'Import', 'import', 'stock'],
 ]
 
 export default function Layout({ children }) {
@@ -53,7 +54,7 @@ export default function Layout({ children }) {
       <nav className="bottomnav">
         {NAV.map(([to, label, icon]) => (
           <NavLink key={to} to={to} end={to === '/'}>
-            <span className="bn-icon">{icon}</span>
+            <span className="bn-icon"><Icon name={icon} size={22} /></span>
             <span>{label}</span>
             {to === '/requests' && newCount > 0 && <b className="badge">{newCount}</b>}
           </NavLink>

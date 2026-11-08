@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Icon from './Icon'
 
 /** Full-screen photo viewer: swipe/arrow through photos, tap ✕ or outside to close */
 export default function PhotoViewer({ photos, start = 0, onClose }) {
@@ -21,7 +22,7 @@ export default function PhotoViewer({ photos, start = 0, onClose }) {
       onTouchEnd={(e) => { if (touchX === null) return; const dx = e.changedTouches[0].clientX - touchX; if (Math.abs(dx) > 50) { e.stopPropagation(); go(dx < 0 ? 1 : -1) } touchX = null }}>
       <div className="viewer-top" onClick={(e) => e.stopPropagation()}>
         <span>{p.label || ''}{n > 1 ? `  ${i + 1} / ${n}` : ''}</span>
-        <button className="btn btn-ghost-light" onClick={onClose} aria-label="Close">✕</button>
+        <button className="btn btn-ghost-light" onClick={onClose} aria-label="Close"><Icon name="close" size={24} /></button>
       </div>
       <img src={p.url} alt={p.label || ''} onClick={(e) => { e.stopPropagation(); if (n > 1) go(1) }} />
       {p.caption && <div className="viewer-cap">{p.caption}</div>}

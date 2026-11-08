@@ -248,7 +248,7 @@ export default function Houses() {
       )}
 
       {soldFor && (
-        <Modal title="Property sold 🎉" onClose={() => setSoldFor(null)}>
+        <Modal title="Property sold" onClose={() => setSoldFor(null)}>
           <div className="stack">
             <p><strong>{soldFor.j.property_address}</strong></p>
             <Field label="Sold (unconditional)"><input type="date" value={soldFor.sold_date} onChange={(e) => setSoldFor({ ...soldFor, sold_date: e.target.value })} /></Field>

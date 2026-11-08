@@ -12,6 +12,7 @@ import HireCard from '../components/HireCard'
 import StockPicker from '../components/StockPicker'
 import JobRooms from '../components/JobRooms'
 import { Field, Modal, Loading, TypeTag, JobPill } from '../components/ui'
+import Icon from '../components/Icon'
 
 const BLANK_JOB = {
   type: 'staging', status: ERP ? 'enquiry' : 'quote_sent', property_address: '', suburb: '', access_notes: '', notes: '',
@@ -162,7 +163,7 @@ export default function JobDetail() {
           return (
             <button type="button" key={k} onClick={() => setStatus(k)}
               className={`step ${k === job.status ? 'current' : i < idx ? 'done' : ''}`}>
-              <span className="step-dot">{i < idx ? '✓' : i + 1}</span>{l}
+              <span className="step-dot">{i < idx ? <Icon name="check" size={13} stroke={2.4} /> : i + 1}</span>{l}
             </button>
           )
         })}
