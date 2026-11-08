@@ -41,7 +41,6 @@ export default function Layout({ children }) {
             </NavLink>
           ))}
           {!ERP && <NavLink to="/dashboard">Dashboard</NavLink>}
-          {!ERP && <NavLink to="/results">Results</NavLink>}
           <NavLink to="/team">Team</NavLink>
         </nav>
         <div className="topbar-actions">

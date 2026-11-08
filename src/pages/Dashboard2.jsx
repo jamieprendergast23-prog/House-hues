@@ -20,7 +20,6 @@ const I = {
   box: <path d="M4 8l8-4 8 4-8 4-8-4zm0 0v8l8 4 8-4V8M12 12v8" />,
   money: <path d="M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6 10v4M18 10v4" />,
   bell: <path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4l2-2zM10 20a2 2 0 0 0 4 0" />,
-  trend: <path d="M4 18l6-6 4 4 6-8M15 8h5v5" />,
 }
 const Icon = ({ name }) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{I[name]}</svg>
@@ -95,10 +94,6 @@ export default function Dashboard2() {
     // reminders
     const overdue = d.reminders.filter((r) => r.due_date < t)
 
-    // results
-    const sold = live.filter((j) => j.sold_date && (j.listed_date || j.install_date))
-    const doms = sold.map((j) => Math.round((parseDate(j.sold_date) - parseDate(j.listed_date || j.install_date)) / 86400000))
-    const vs = sold.filter((j) => j.guide_price && j.sale_price).map((j) => ((j.sale_price - j.guide_price) / j.guide_price) * 100)
 
     return {
       t, events: events.slice(0, 4), todayCount, weekCount,
@@ -107,8 +102,6 @@ export default function Dashboard2() {
       booked: month.reduce((a, j) => a + price(j), 0), received: month.reduce((a, j) => a + got(j), 0), monthJobs: month.length,
       owing, owedTotal: owing.reduce((a, j) => a + j.owed, 0), last6,
       reminders: d.reminders.slice(0, 4), overdue: overdue.length, remCount: d.reminders.length,
-      sold: sold.length, avgDom: doms.length ? Math.round(doms.reduce((a, b) => a + b, 0) / doms.length) : null,
-      avgVs: vs.length ? vs.reduce((a, b) => a + b, 0) / vs.length : null,
     }
   }, [d])
 
@@ -213,16 +206,6 @@ export default function Dashboard2() {
           ))}
         </Tile>
 
-        <Tile icon="trend" tone="t-sage" title="Results" to="/results" action="Open Results"
-          badge={s.sold ? `${s.sold} sold` : null} badgeTone="ok">
-          <div className="tc-row tc-col tc-hero">
-            <b>{s.avgDom ?? '—'}</b>
-            <span className="tc-sub">average days on market</span>
-          </div>
-          <div className="tc-row tc-counts">
-            <span><b>{s.avgVs !== null ? `${s.avgVs >= 0 ? '+' : ''}${s.avgVs.toFixed(1)}%` : '—'}</b> vs price guide</span>
-          </div>
-        </Tile>
       </div>
     </div>
   )

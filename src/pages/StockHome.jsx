@@ -67,7 +67,6 @@ export default function StockHome() {
         <Link className="quick-btn" to="/inventory/new"><span>＋</span>Add item</Link>
         <Link className="quick-btn" to="/import"><span>⇪</span>Import list</Link>
         <Link className="quick-btn" to="/dashboard"><span>▦</span>Dashboard</Link>
-        <Link className="quick-btn" to="/results"><span>↗</span>Results</Link>
       </div>
 
       <div className="stats">

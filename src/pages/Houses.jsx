@@ -97,18 +97,15 @@ export default function Houses() {
 
   const askSold = (j) => {
     setSheet(null)
-    setSoldFor({ j, sold_date: j.sold_date || t, sale_price: j.sale_price ?? '', guide_price: j.guide_price ?? '', agent_name: j.agent_name || '', listed_date: j.listed_date || '' })
+    setSoldFor({ j, sold_date: j.sold_date || t })
   }
   const saveSold = async () => {
     const { j, ...f } = soldFor
     setBusy(true)
-    const { error } = await supabase.from('jobs').update({
-      sold_date: f.sold_date || null, sale_price: f.sale_price || null, guide_price: f.guide_price || null,
-      agent_name: f.agent_name || null, listed_date: f.listed_date || null,
-    }).eq('id', j.id)
+    const { error } = await supabase.from('jobs').update({ sold_date: f.sold_date || null }).eq('id', j.id)
     setBusy(false)
     if (error) return toast(friendlyError(error), 'error')
-    toast('Sale recorded. Added to your Results.')
+    toast('Marked as sold')
     setSoldFor(null)
     load()
     if (!j.collection_date) askDate(j, 'collection_date')
@@ -253,14 +250,8 @@ export default function Houses() {
       {soldFor && (
         <Modal title="Property sold 🎉" onClose={() => setSoldFor(null)}>
           <div className="stack">
-            <p><strong>{soldFor.j.property_address}</strong><br /><span className="muted small">This builds your results sheet for agents.</span></p>
-            <div className="grid2">
-              <Field label="Sold (unconditional)"><input type="date" value={soldFor.sold_date} onChange={(e) => setSoldFor({ ...soldFor, sold_date: e.target.value })} /></Field>
-              <Field label="Listed (optional)" hint="Blank = install date"><input type="date" value={soldFor.listed_date} onChange={(e) => setSoldFor({ ...soldFor, listed_date: e.target.value })} /></Field>
-              <Field label="Sale price ($)"><input type="number" inputMode="numeric" value={soldFor.sale_price} onChange={(e) => setSoldFor({ ...soldFor, sale_price: e.target.value })} /></Field>
-              <Field label="Price guide ($)"><input type="number" inputMode="numeric" value={soldFor.guide_price} onChange={(e) => setSoldFor({ ...soldFor, guide_price: e.target.value })} /></Field>
-            </div>
-            <Field label="Listing agent"><input value={soldFor.agent_name} onChange={(e) => setSoldFor({ ...soldFor, agent_name: e.target.value })} placeholder="e.g. Tom, Riverina Realty" /></Field>
+            <p><strong>{soldFor.j.property_address}</strong></p>
+            <Field label="Sold (unconditional)"><input type="date" value={soldFor.sold_date} onChange={(e) => setSoldFor({ ...soldFor, sold_date: e.target.value })} /></Field>
             <div className="row">
               <button className="btn btn-ghost" onClick={() => setSoldFor(null)}>Cancel</button>
               <button className="btn btn-primary grow btn-big" disabled={busy || !soldFor.sold_date} onClick={saveSold}>

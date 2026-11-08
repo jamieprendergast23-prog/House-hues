@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, fetchAll } from '../lib/supabase'
-import { today, addDays, hireEnd, fmtDate, parseDate, toISO } from '../lib/format'
+import { today, addDays, hireEnd, fmtDate, toISO } from '../lib/format'
 import { Loading } from '../components/ui'
 
 // Statuses that count as won work (anything past "quote sent", not cancelled)
@@ -128,18 +128,12 @@ export default function Business() {
     }
     const topAgents = [...agents.values()].sort((a, b) => b.value - a.value || b.jobs - a.jobs).slice(0, 5)
 
-    // sale results
-    const sold = live.filter((j) => j.sold_date && (j.listed_date || j.install_date))
-    const dom = sold.map((j) => Math.round((parseDate(j.sold_date) - parseDate(j.listed_date || j.install_date)) / 86400000))
-    const vsGuide = sold.filter((j) => j.guide_price && j.sale_price).map((j) => ((j.sale_price - j.guide_price) / j.guide_price) * 100)
 
     return {
       from, to, won, booked, got, noPrice, avg: priced.length ? booked / priced.length : null, owing,
       quotes, quoteValue: quotes.reduce((a, j) => a + price(j), 0), winRate, outNow, installsSoon, packupsSoon, months,
       pieces: pieces.length, out, util: pieces.length ? (out / pieces.length) * 100 : 0, repair, stockCost, replace, top, never,
-      topAgents, sold: sold.length,
-      avgDom: dom.length ? Math.round(dom.reduce((a, b) => a + b, 0) / dom.length) : null,
-      avgVs: vsGuide.length ? vsGuide.reduce((a, b) => a + b, 0) / vsGuide.length : null,
+      topAgents,
     }
   }, [d, period])
 
@@ -219,15 +213,6 @@ export default function Business() {
           </dl>
         </section>
 
-        <section className="card">
-          <h2>Sale results</h2>
-          <dl className="dl">
-            <dt>Houses sold</dt><dd>{s.sold}</dd>
-            <dt>Avg days on market</dt><dd>{s.avgDom ?? '—'}</dd>
-            <dt>Avg vs price guide</dt><dd>{s.avgVs !== null ? `${s.avgVs >= 0 ? '+' : ''}${s.avgVs.toFixed(1)}%` : '—'}</dd>
-          </dl>
-          <Link to="/results" className="small">Open Results →</Link>
-        </section>
       </div>
 
       <div className="biz-grid">
