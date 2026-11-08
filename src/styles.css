@@ -800,3 +800,10 @@ input[type=checkbox] { box-shadow: none; }
 .access .icon, .all-done .icon { vertical-align: -3px; }
 .pick-check, .sl-check, .tile-check, .pg-check, .step-dot { display: inline-grid; place-items: center; }
 .scan-result .icon { vertical-align: -4px; margin-right: 4px; }
+
+/* dashboard welcome */
+.welcome { margin: 4px 0 2px; }
+.welcome-date { margin: 0; font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.welcome-hi { font-family: var(--serif); font-weight: 300; text-transform: none; letter-spacing: .01em; font-size: 2rem; margin: 2px 0 2px; }
+.welcome-sum { margin: 0; color: var(--muted); font-size: .95rem; }
+@media (min-width: 760px) { .welcome-hi { font-size: 2.4rem; } }

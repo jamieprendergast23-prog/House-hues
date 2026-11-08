@@ -34,7 +34,7 @@ function Tile({ icon, tone, title, badge, badgeTone = 'ok', to, action, children
 export default function Dashboard2() {
   const [d, setD] = useState(null)
   const [scan, setScan] = useState(false)
-  const { can, isAdmin } = useAuth()
+  const { can, isAdmin, profile, session } = useAuth()
   const nav = useNavigate()
 
   const load = () => Promise.all([
@@ -112,10 +112,7 @@ export default function Dashboard2() {
 
   return (
     <div className="stack">
-      <div className="page-head">
-        <h1>Dashboard</h1>
-        <span className="small muted">{parseDate(s.t).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-      </div>
+      <Welcome profile={profile} session={session} s={s} can={can} />
 
       <div className="quick">
         {can('stock') && <button className="quick-btn primary" onClick={() => setScan(true)}><Icon name="scan" size={24} />Scan</button>}
@@ -222,5 +219,28 @@ export default function Dashboard2() {
       </div>
       {scan && <Scanner onClose={() => setScan(false)} onCode={(code) => { setScan(false); nav(`/i/${code}`) }} />}
     </div>
+  )
+}
+
+/** "Good morning, Hayley" plus a one-line summary of what needs attention. */
+function Welcome({ profile, session, s, can }) {
+  const h = new Date().getHours()
+  const part = h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'
+  const raw = profile?.full_name || session?.user?.email?.split('@')[0] || ''
+  const first = raw.trim().split(/\s+/)[0]
+  const name = first ? first.charAt(0).toUpperCase() + first.slice(1) : ''
+  const bits = []
+  if (can('calendar')) {
+    if (s.todayCount) bits.push(`${s.todayCount} thing${s.todayCount === 1 ? '' : 's'} on today`)
+    else if (s.weekCount) bits.push(`${s.weekCount} coming up this week`)
+    if (s.overdue) bits.push(`${s.overdue} reminder${s.overdue === 1 ? '' : 's'} overdue`)
+  }
+  if (can('houses') && s.cols.out.length) bits.push(`${s.cols.out.length} house${s.cols.out.length === 1 ? '' : 's'} styled`)
+  return (
+    <header className="welcome">
+      <p className="welcome-date">{parseDate(s.t).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+      <h1 className="welcome-hi">Good {part}{name ? `, ${name}` : ''}</h1>
+      {bits.length > 0 && <p className="welcome-sum">{bits.join(' · ')}</p>}
+    </header>
   )
 }

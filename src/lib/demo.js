@@ -8,7 +8,7 @@ const d = (n) => addDays(T, n)
 const nowISO = () => new Date().toISOString()
 
 // ---------- sample data ----------
-const ADMIN = { id: 'u-admin', full_name: 'Owner', role: 'admin', permissions: [], created_at: nowISO() }
+const ADMIN = { id: 'u-admin', full_name: 'Hayley', role: 'admin', permissions: [], created_at: nowISO() }
 const CREW = { id: 'u-crew', full_name: 'Sam (crew)', role: 'crew', permissions: ['field'], created_at: nowISO() }
 const STYLIST = { id: 'u-stylist', full_name: 'Jess (stylist)', role: 'crew', permissions: ['dashboard', 'stock', 'houses', 'calendar', 'field'], created_at: nowISO() }
 
