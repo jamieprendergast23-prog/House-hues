@@ -3,6 +3,7 @@ import { supabase, isDemo } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { toast } from '../lib/toast'
 import { Field, Loading } from '../components/ui'
+import MailConnect from '../components/MailConnect'
 
 export default function Team() {
   const { session } = useAuth()
@@ -52,6 +53,8 @@ export default function Team() {
           </li>
         ))}
       </ul>
+
+      <MailConnect />
 
       <form className="card" onSubmit={invite}>
         <h2>Invite someone</h2>

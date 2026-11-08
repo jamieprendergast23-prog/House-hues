@@ -605,3 +605,16 @@ button.house-card { width: 100%; text-align: left; font: inherit; cursor: pointe
 .reminder-list li.done .row-title { text-decoration: line-through; opacity: .55; }
 .reminder-list li.overdue .row-sub { color: var(--danger, #b4483c); font-weight: 600; }
 .reminder-list input[type=checkbox], .note .list-row input[type=checkbox] { width: 22px; height: 22px; min-height: 0; flex: none; }
+
+/* emails */
+.mail-list { margin-top: 8px; }
+.mail-row { width: 100%; text-align: left; background: none; border: 0; font: inherit; color: inherit; cursor: pointer; }
+.mail-row.unread .row-title, .mail-row.unread .mail-subject { font-weight: 700; }
+.mail-row.unread .row-title::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent, #c4962e); margin-right: 6px; vertical-align: middle; }
+.mail-subject { font-size: .92rem; margin-top: 2px; }
+.mail-preview { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.mail-msg { border: 1px solid var(--line, #e5e1da); border-radius: 10px; padding: 12px; background: #fff; }
+.mail-body { width: 100%; border: 0; min-height: 60px; margin-top: 8px; display: block; }
+
+.reminder-form > input:first-child { flex: 1 1 100%; }
+.reminder-form > input[type=date] { flex: 1 1 auto; }

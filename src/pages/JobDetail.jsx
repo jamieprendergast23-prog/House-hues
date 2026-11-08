@@ -6,6 +6,7 @@ import { fmtDate, fmtLong, hireEnd, money, addDays } from '../lib/format'
 import { toast } from '../lib/toast'
 import { ERP, PLANNER } from '../lib/features'
 import Reminders from '../components/Reminders'
+import BookingEmails from '../components/BookingEmails'
 import HireCard from '../components/HireCard'
 import StockPicker from '../components/StockPicker'
 import JobRooms from '../components/JobRooms'
@@ -302,6 +303,7 @@ export default function JobDetail() {
       )}
 
       {!isNew && <Reminders jobId={id} />}
+      {!isNew && <BookingEmails job={job} client={client} />}
 
       {!isNew && ERP && <ClientMessage job={job} client={client} />}
       {!isNew && PLANNER && job.type === 'staging' && job.install_date && <HireCard job={job} client={client} fin={fin} />}

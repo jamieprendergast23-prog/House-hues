@@ -55,7 +55,7 @@ export default function Reminders({ jobId }) {
           ))}
         </ul>
       )}
-      <form className="row wrap" onSubmit={add}>
+      <form className="row wrap reminder-form" onSubmit={add}>
         <input className="grow" placeholder="e.g. Call agent to confirm access" value={title} onChange={(e) => setTitle(e.target.value)} />
         <input type="date" value={due} onChange={(e) => setDue(e.target.value)} style={{ width: 'auto' }} aria-label="Remind on" />
         <button className="btn btn-primary" disabled={busy || !title.trim()}>Add</button>
