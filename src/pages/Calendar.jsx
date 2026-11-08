@@ -117,10 +117,10 @@ export default function CalendarPage() {
               className={`cal-cell ${d.getMonth() !== month.getMonth() ? 'other' : ''} ${iso === today() ? 'is-today' : ''} ${iso === day ? 'sel' : ''} ${weekSet.has(iso) ? 'in-week' : ''}`}>
               <span className="cal-num">{d.getDate()}</span>
               <span className="cal-evs">
-                {evs.slice(0, 2).map((e, i) => (
+                {evs.slice(0, 3).map((e, i) => (
                   <span key={i} className={`cal-ev ${e.cls}`}><span className="cal-ev-txt">{e.label} · {e.job.property_address}</span></span>
                 ))}
-                {evs.length > 2 && <span className="cal-more">+{evs.length - 2}</span>}
+                {evs.length > 3 && <span className="cal-more">+{evs.length - 3}</span>}
               </span>
             </button>
           )

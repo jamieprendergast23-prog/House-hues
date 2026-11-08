@@ -210,9 +210,10 @@ a.list-row:active, label.list-row:active { background: var(--accent-soft); }
 .cal-cell.is-today .cal-num { background: var(--ink); color: #fff; border-radius: 99px; padding: 0 6px; }
 .cal-cell.sel { outline: 2.5px solid var(--accent); outline-offset: -1px; }
 .cal-num { font-size: .8rem; font-weight: 700; align-self: flex-start; }
-.cal-evs { display: flex; flex-wrap: wrap; gap: 3px; }
-.cal-ev { width: 8px; height: 8px; border-radius: 50%; }
-.cal-ev-txt { display: none; }
+.cal-evs { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* phone: small stacked pills, text cut off with … */
+.cal-ev { display: block; min-width: 0; border-radius: 3px; padding: 0 3px; color: #fff; font-size: .56rem; font-weight: 600; line-height: 1.45; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-ev-txt { display: inline; }
 .cal-more { font-size: .65rem; color: var(--muted); }
 .cal-hire { position: absolute; right: 4px; top: 4px; font-size: .62rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 0 5px; }
 @media (min-width: 700px) {
@@ -563,7 +564,8 @@ button.house-card { width: 100%; text-align: left; font: inherit; cursor: pointe
 .pg-step span { min-width: 18px; text-align: center; font-weight: 600; }
 
 /* ---- compact month + week view ---- */
-.cal-cell { min-height: 46px; }
+.cal-cell { min-height: 46px; padding: 3px 2px; }
+@media (max-width: 699px) { .cal { gap: 2px; } }
 @media (min-width: 700px) { .cal-cell { min-height: 68px; } .cal-ev { font-size: .66rem; padding: 0 4px; } }
 .cal-cell.in-week { background: #f7f3ec; }
 .cal-cell.other { opacity: .35; }
