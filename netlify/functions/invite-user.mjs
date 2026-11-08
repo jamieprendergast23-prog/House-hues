@@ -1,6 +1,7 @@
 // Admin-only: invite a crew member or admin by email.
 // Needs SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY. Optional SITE_URL for the redirect.
 import { createClient } from '@supabase/supabase-js'
+import { SUPABASE_URL, SERVICE_KEY, SITE_URL, MISSING_KEY } from '../lib/env.mjs'
 
 const json = (status, body) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json' },
@@ -11,7 +12,8 @@ export default async (req) => {
   const token = (req.headers.get('authorization') || '').replace(/^Bearer /, '')
   if (!token) return json(401, { error: 'Not signed in' })
 
-  const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+  if (!SERVICE_KEY) return json(503, { error: MISSING_KEY })
+  const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
 
   // who is asking, and are they an admin?
   const { data: u, error: uErr } = await admin.auth.getUser(token)
@@ -24,7 +26,7 @@ export default async (req) => {
   const perms = Array.isArray(permissions) ? permissions.filter((p) => ALLOWED.includes(p)) : ['field']
   if (!email) return json(400, { error: 'Email required' })
 
-  const site = process.env.SITE_URL || process.env.URL
+  const site = SITE_URL
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email.trim(), {
     data: { full_name: full_name || '' },
     redirectTo: site,

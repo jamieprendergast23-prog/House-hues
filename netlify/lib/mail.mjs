@@ -2,6 +2,7 @@
 // Env (Netlify): SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SITE_URL,
 //                MS_CLIENT_ID, MS_CLIENT_SECRET, MS_TENANT (optional, default "organizations")
 import { createClient } from '@supabase/supabase-js'
+import { SUPABASE_URL, SERVICE_KEY, SITE_URL } from './env.mjs'
 
 export const SCOPES = 'offline_access openid email User.Read Mail.ReadWrite Mail.Send'
 export const GRAPH = 'https://graph.microsoft.com/v1.0'
@@ -10,17 +11,16 @@ export const json = (status, body) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
 })
 
-export const site = () => (process.env.SITE_URL || process.env.URL || '').replace(/\/$/, '')
+export const site = () => SITE_URL
 export const redirectUri = () => `${site()}/.netlify/functions/mail-callback`
 const tenant = () => process.env.MS_TENANT || 'organizations'
 export const authority = () => `https://login.microsoftonline.com/${tenant()}/oauth2/v2.0`
 
 export function configured() {
-  return Boolean(process.env.MS_CLIENT_ID && process.env.MS_CLIENT_SECRET &&
-    process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
+  return Boolean(process.env.MS_CLIENT_ID && process.env.MS_CLIENT_SECRET && SERVICE_KEY)
 }
 
-export const db = () => createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+export const db = () => createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
 
 /** Signed-in user from the request's Supabase token if they're an admin
  *  (or, when `perm` is given, have that area ticked on the Team page). */

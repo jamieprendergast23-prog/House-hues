@@ -4,6 +4,7 @@
 //   RESEND_API_KEY, NOTIFY_EMAIL, FROM_EMAIL  (optional: email notifications via resend.com)
 //   SITE_URL                                  (optional: used for the link in the email)
 import { createClient } from '@supabase/supabase-js'
+import { SUPABASE_URL, SERVICE_KEY, SITE_URL, MISSING_KEY } from '../lib/env.mjs'
 
 const json = (status, body) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json' },
@@ -37,7 +38,8 @@ export default async (req) => {
   if (!row.name || !row.email || !row.property_address) return json(400, { error: 'Name, email and address are required' })
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(row.email)) return json(400, { error: 'That email doesn’t look right' })
 
-  const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+  if (!SERVICE_KEY) return json(503, { error: MISSING_KEY })
+  const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } })
   const { error } = await db.from('booking_requests').insert(row)
   if (error) { console.error(error); return json(500, { error: 'Could not save your request' }) }
 
@@ -46,7 +48,7 @@ export default async (req) => {
   const to = process.env.NOTIFY_EMAIL
   const from = process.env.FROM_EMAIL || 'House & Hues <onboarding@resend.dev>'
   if (key && to) {
-    const site = process.env.SITE_URL || process.env.URL || ''
+    const site = SITE_URL
     const lines = [
       ['Service', row.service_type], ['Address', `${row.property_address}${row.suburb ? `, ${row.suburb}` : ''}`],
       ['Preferred date', row.preferred_date], ['Property', [row.property_type, row.bedrooms && `${row.bedrooms} bed`].filter(Boolean).join(', ')],
