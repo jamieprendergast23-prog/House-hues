@@ -694,3 +694,99 @@ a.tc-row:hover { background: #f1ede6; }
 .perm small { color: var(--muted); font-size: .78rem; }
 
 .quick-btn { text-align: center; line-height: 1.15; }
+
+/* ===================================================================
+   Depth: soft layered shadows so surfaces sit above the page.
+   Warm-tinted (not grey) to suit the stone palette.
+   =================================================================== */
+:root {
+  --sh-1: 0 1px 2px rgba(58, 44, 30, .06), 0 2px 8px rgba(58, 44, 30, .05);
+  --sh-2: 0 2px 4px rgba(58, 44, 30, .06), 0 10px 24px rgba(58, 44, 30, .09);
+  --sh-3: 0 4px 10px rgba(58, 44, 30, .08), 0 24px 48px rgba(58, 44, 30, .16);
+  --edge: rgba(120, 100, 80, .14);
+  --hi: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+/* page: a gentle warm wash so white cards lift off it */
+html, body { background: linear-gradient(180deg, #f6f3ef 0%, #efeae3 100%) fixed; }
+
+/* surfaces */
+.card, .stat, .tile-card, .quick-btn, .house-card, .team-person, .perm {
+  border-color: var(--edge);
+  box-shadow: var(--hi), var(--sh-1);
+}
+.tile-card { border-radius: 16px; box-shadow: var(--hi), var(--sh-2); }
+.card-soft { box-shadow: inset 0 1px 3px rgba(58, 44, 30, .07); }
+
+/* things you can tap rise a little on hover and press back down */
+@media (hover: hover) {
+  a.card:hover, a.stat:hover, .quick-btn:hover, .house-card:hover, .tile-card:hover, .perm:hover {
+    transform: translateY(-2px); box-shadow: var(--hi), var(--sh-2);
+  }
+  .tile-card:hover { box-shadow: var(--hi), var(--sh-3); }
+  .tile:hover .tile-img, .pg-img:hover { box-shadow: var(--sh-2); }
+}
+.quick-btn, .house-card, .tile-card, a.card, a.stat, .perm, .tile-img, .pg-img {
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.quick-btn:active, .house-card:active, a.card:active { transform: translateY(0) scale(.985); box-shadow: var(--sh-1); }
+
+/* photos: a soft shadow so they read as objects, not flat squares */
+.tile-img, .pg-img { box-shadow: var(--sh-1); }
+.biz-thumb { box-shadow: var(--sh-1); }
+
+/* rows inside dashboard tiles: slightly recessed */
+.tc-row { background: linear-gradient(180deg, #f7f4f0, #f3efe9); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), inset 0 -1px 0 rgba(58,44,30,.04); }
+a.tc-row:hover { background: linear-gradient(180deg, #f2ede6, #ece6dd); }
+.tc-icon { box-shadow: var(--hi), 0 1px 3px rgba(58, 44, 30, .1); }
+.tc-badge { box-shadow: 0 1px 2px rgba(0,0,0,.15), inset 0 1px 0 rgba(255,255,255,.18); }
+
+/* buttons: raised, with a light top edge; primary has a soft charcoal sheen */
+.btn { box-shadow: var(--hi), 0 1px 2px rgba(58, 44, 30, .08); background-image: linear-gradient(180deg, #fff, #faf8f5); }
+.btn-primary { background-image: linear-gradient(180deg, #3a3a3a, #161616); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 2px 6px rgba(0,0,0,.22); }
+.btn-ghost, .btn-ghost-light { background-image: none; box-shadow: none; }
+.btn:active { box-shadow: inset 0 2px 4px rgba(0,0,0,.12); }
+.btn-primary:active { box-shadow: inset 0 2px 6px rgba(0,0,0,.4); }
+.quick-btn.primary { background-image: linear-gradient(180deg, #3a3a3a, #161616); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), var(--sh-2); }
+
+/* inputs: slightly sunk in */
+input, select, textarea { box-shadow: inset 0 1px 2px rgba(58, 44, 30, .06); }
+input:focus, select:focus, textarea:focus { box-shadow: inset 0 1px 2px rgba(58,44,30,.06), 0 0 0 3px var(--accent-soft); }
+input[type=checkbox] { box-shadow: none; }
+
+/* segmented switch: a recessed track with a raised thumb */
+.seg { background: #e8e2da; box-shadow: inset 0 1px 3px rgba(58, 44, 30, .12); }
+.seg button.on { box-shadow: var(--hi), 0 1px 3px rgba(58, 44, 30, .14), 0 2px 6px rgba(58, 44, 30, .06); }
+
+/* top and bottom bars: frosted glass floating over the page */
+.topbar {
+  background: rgba(255, 255, 255, .78);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px); backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom-color: var(--edge); box-shadow: 0 1px 0 rgba(255,255,255,.6), 0 6px 20px rgba(58, 44, 30, .06);
+}
+.bottomnav {
+  background: rgba(255, 255, 255, .82);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px); backdrop-filter: saturate(1.4) blur(14px);
+  border-top-color: var(--edge); box-shadow: 0 -6px 20px rgba(58, 44, 30, .07);
+}
+
+/* sheets and pop-ups float well above everything */
+.modal { box-shadow: var(--sh-3); }
+.modal-bg { -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+
+/* calendar */
+.cal-cell { border-color: var(--edge); box-shadow: 0 1px 2px rgba(58, 44, 30, .05); }
+.cal-cell.sel { box-shadow: var(--sh-2); }
+.week-day { border-color: var(--edge); background: rgba(255,255,255,.55); box-shadow: inset 0 1px 0 rgba(255,255,255,.8); }
+.week-day.is-today { box-shadow: var(--sh-1); background: #fff; }
+.cal-ev, .wd-ev { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 1px 1px rgba(0,0,0,.08); }
+
+/* meters and charts: a little roundness and lift */
+.meter { box-shadow: inset 0 1px 2px rgba(58, 44, 30, .12); }
+.meter span { background-image: linear-gradient(180deg, #a08d78, #7d6b58); }
+.tm-bar, .mb-bar { filter: drop-shadow(0 1px 1px rgba(58, 44, 30, .12)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-btn, .house-card, .tile-card, a.card, a.stat, .perm, .tile-img, .pg-img { transition: none; }
+  a.card:hover, a.stat:hover, .quick-btn:hover, .house-card:hover, .tile-card:hover, .perm:hover { transform: none; }
+}
