@@ -22,14 +22,16 @@ export function configured() {
 
 export const db = () => createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
 
-/** Signed-in admin from the request's Supabase token, or null. */
-export async function adminFrom(req, admin) {
+/** Signed-in user from the request's Supabase token if they're an admin
+ *  (or, when `perm` is given, have that area ticked on the Team page). */
+export async function adminFrom(req, admin, perm) {
   const token = (req.headers.get('authorization') || '').replace(/^Bearer /, '')
   if (!token) return null
   const { data: u } = await admin.auth.getUser(token)
   if (!u?.user) return null
-  const { data: me } = await admin.from('profiles').select('role').eq('id', u.user.id).single()
-  return me?.role === 'admin' ? u.user : null
+  const { data: me } = await admin.from('profiles').select('role, permissions').eq('id', u.user.id).single()
+  if (me?.role === 'admin') return u.user
+  return perm && (me?.permissions || []).includes(perm) ? u.user : null
 }
 
 async function tokenRequest(params) {

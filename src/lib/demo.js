@@ -8,8 +8,9 @@ const d = (n) => addDays(T, n)
 const nowISO = () => new Date().toISOString()
 
 // ---------- sample data ----------
-const ADMIN = { id: 'u-admin', full_name: 'Owner', role: 'admin', created_at: nowISO() }
-const CREW = { id: 'u-crew', full_name: 'Sam (crew)', role: 'crew', created_at: nowISO() }
+const ADMIN = { id: 'u-admin', full_name: 'Owner', role: 'admin', permissions: [], created_at: nowISO() }
+const CREW = { id: 'u-crew', full_name: 'Sam (crew)', role: 'crew', permissions: ['field'], created_at: nowISO() }
+const STYLIST = { id: 'u-stylist', full_name: 'Jess (stylist)', role: 'crew', permissions: ['dashboard', 'stock', 'houses', 'calendar', 'field'], created_at: nowISO() }
 
 const STOCK = [
   ['Linen 3-seater sofa', 'Sofa', 'Oatmeal', '220 x 90 cm', 'Bay 1'],
@@ -46,7 +47,7 @@ const STOCK = [
 
 function seed() {
   const db = {
-    profiles: [ADMIN, CREW], items: [], item_costs: [], clients: [], jobs: [],
+    profiles: [ADMIN, CREW, STYLIST], items: [], item_costs: [], clients: [], jobs: [],
     job_finance: [], job_items: [], booking_requests: [], item_events: [], job_photos: [], reminders: [], _itemSeq: 1, _jobSeq: 1001,
   }
   const skus = {}, perLetter = {}

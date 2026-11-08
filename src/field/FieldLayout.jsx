@@ -6,7 +6,7 @@ import { toast } from '../lib/toast'
 import { Modal, Brand } from '../components/ui'
 
 export default function FieldLayout({ children }) {
-  const { isAdmin, setFieldMode, profile } = useAuth()
+  const { hasMain, setFieldMode, profile } = useAuth()
   const nav = useNavigate()
   const [menu, setMenu] = useState(false)
   const [pw, setPw] = useState('')
@@ -33,9 +33,9 @@ export default function FieldLayout({ children }) {
       {menu && (
         <Modal title="Menu" onClose={() => setMenu(false)}>
           <div className="stack">
-            {isAdmin && (
+            {hasMain && (
               <button className="btn btn-primary btn-big btn-block" onClick={() => { setFieldMode(false); setMenu(false); nav('/') }}>
-                Back to admin
+                Back to office
               </button>
             )}
             <form onSubmit={savePw} className="stack">

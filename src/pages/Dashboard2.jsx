@@ -4,6 +4,7 @@ import { supabase, fetchAll, friendlyError } from '../lib/supabase'
 import { today, addDays, hireEnd, parseDate, toISO } from '../lib/format'
 import { toast } from '../lib/toast'
 import { Loading } from '../components/ui'
+import { useAuth } from '../lib/auth'
 import Scanner from '../components/Scanner'
 import { jobEvents } from './Calendar'
 import { columnOf } from './Houses'
@@ -43,6 +44,7 @@ function Tile({ icon, tone, title, badge, badgeTone = 'ok', to, action, children
 export default function Dashboard2() {
   const [d, setD] = useState(null)
   const [scan, setScan] = useState(false)
+  const { can, isAdmin } = useAuth()
   const nav = useNavigate()
 
   const load = () => Promise.all([
@@ -126,95 +128,106 @@ export default function Dashboard2() {
       </div>
 
       <div className="quick">
-        <button className="quick-btn primary" onClick={() => setScan(true)}><span>⌗</span>Scan</button>
-        <Link className="quick-btn" to="/inventory/new"><span>＋</span>Add item</Link>
-        <Link className="quick-btn" to="/jobs/new"><span>⌂</span>New house</Link>
-        <Link className="quick-btn" to="/import"><span>⇪</span>Import list</Link>
+        {can('stock') && <button className="quick-btn primary" onClick={() => setScan(true)}><span>⌗</span>Scan</button>}
+        {can('stock') && <Link className="quick-btn" to="/inventory/new"><span>＋</span>Add item</Link>}
+        {can('houses') && <Link className="quick-btn" to="/jobs/new"><span>⌂</span>New house</Link>}
+        {can('stock') && <Link className="quick-btn" to="/import"><span>⇪</span>Import list</Link>}
+        {isAdmin && <Link className="quick-btn" to="/team"><span>☺</span>Team</Link>}
       </div>
 
       <div className="tiles">
-        <Tile icon="cal" tone="t-rose" title="Calendar" to="/calendar" action="Open Calendar"
-          badge={s.todayCount ? `${s.todayCount} today` : s.weekCount ? `${s.weekCount} this week` : null} badgeTone="info">
-          {s.events.length === 0 ? <p className="tc-empty">Nothing coming up.</p> : s.events.map((e, i) => (
-            <Link key={i} to={`/jobs/${e.job.id}`} className="tc-row">
-              <i className={`dot ${e.cls}`} />
-              <div className="grow">
-                <div className="tc-title">{e.date === s.t ? 'Today' : short(e.date)}</div>
-                <div className="tc-sub">{e.label} · {e.job.property_address}</div>
-              </div>
-            </Link>
-          ))}
-        </Tile>
-
-        <Tile icon="house" tone="t-sage" title="Houses" to="/houses" action="Open Houses"
-          badge={s.cols.out.length ? `${s.cols.out.length} out` : null} badgeTone="ok">
-          <div className="tc-row tc-counts">
-            {[['quote', 'Quotes', 'c-quote'], ['booked', 'Booked', 'c-booked'], ['out', 'Out', 'c-out'], ['packup', 'Pack-ups', 'c-pack']].map(([k, l, c]) => (
-              <span key={k}><i className={`dot ${c}`} /><b>{s.cols[k].length}</b> {l}</span>
-            ))}
-          </div>
-          {s.next ? (
-            <Link to={`/jobs/${s.next.id}`} className="tc-row tc-col">
-              <div className="row between"><span className="tc-title">Next install: {s.next.property_address}</span><span className="tc-sub">{short(s.next.install_date)}</span></div>
-              {s.nextProg.total > 0 ? (
-                <>
-                  <div className="meter"><span style={{ width: `${(s.nextProg.packed / s.nextProg.total) * 100}%` }} /></div>
-                  <div className="tc-sub">{s.nextProg.packed} of {s.nextProg.total} pieces packed</div>
-                </>
-              ) : <div className="tc-sub">No furniture picked yet</div>}
-            </Link>
-          ) : <p className="tc-empty">No installs booked.</p>}
-          {s.endingSoon > 0 && <div className="tc-row"><span className="tc-sub"><b>{s.endingSoon}</b> hire{s.endingSoon === 1 ? '' : 's'} ending this week</span></div>}
-        </Tile>
-
-        <Tile icon="box" tone="t-sand" title="Stock" to="/inventory" action="Open Stock"
-          badge={s.missing ? `${s.missing} missing` : s.repair ? `${s.repair} to repair` : null} badgeTone={s.missing ? 'urgent' : 'warn'}>
-          <div className="tc-row tc-col tc-hero">
-            <b>{s.out} of {s.pieces}</b>
-            <span className="tc-sub">pieces out on hire ({util}%)</span>
-            <div className="meter"><span style={{ width: `${util}%` }} /></div>
-          </div>
-          <div className="tc-row tc-counts">
-            <span><b>{s.inShed}</b> in shed</span>
-            <span><b>{s.repair}</b> repair</span>
-            <span><b>{s.missing}</b> missing</span>
-          </div>
-        </Tile>
-
-        <Tile icon="money" tone="t-plum" title="Money" to="/business" action="Business details"
-          badge={s.owedTotal ? `${cash(s.owedTotal)} owed` : 'All paid'} badgeTone={s.owedTotal ? 'urgent' : 'ok'}>
-          <div className="tc-row tc-counts">
-            <span><b>{cash(s.booked)}</b> booked</span>
-            <span><b>{cash(s.received)}</b> received</span>
-          </div>
-          <div className="tc-mini" role="img" aria-label={`Booked work, last 6 months: ${s.last6.map((m) => `${m.label} ${cash(m.v)}`).join(', ')}`}>
-            {s.last6.map((m, i) => (
-              <div key={m.k} className="tm-col" title={`${m.label}: ${cash(m.v)}`}>
-                <span className={`tm-bar ${i === 5 ? 'now' : ''}`} style={{ height: `${m.v ? Math.max(6, (m.v / max6) * 100) : 0}%` }} />
-                <span className="tm-l">{m.label}</span>
-              </div>
-            ))}
-          </div>
-          {s.owing.slice(0, 2).map((j) => (
-            <Link key={j.id} to={`/jobs/${j.id}`} className="tc-row">
-              <div className="grow"><div className="tc-title">{j.property_address}</div><div className="tc-sub">{j.job_finance?.deposit_paid_on ? 'Deposit paid' : 'Not paid'}</div></div>
-              <b>{cash(j.owed)}</b>
-            </Link>
-          ))}
-        </Tile>
-
-        <Tile icon="bell" tone="t-gold" title="Reminders" to="/calendar" action="Open Calendar"
-          badge={s.overdue ? `${s.overdue} overdue` : s.remCount ? `${s.remCount} open` : null} badgeTone={s.overdue ? 'urgent' : 'info'}>
-          {s.reminders.length === 0 ? <p className="tc-empty">No reminders. Add them on a house.</p> : s.reminders.map((r) => (
-            <div key={r.id} className={`tc-row ${r.due_date < s.t ? 'late' : ''}`}>
-              <input type="checkbox" aria-label="Done" onChange={() => tick(r)} />
-              <Link to={`/jobs/${r.job_id}`} className="grow">
-                <div className="tc-title">{r.title}</div>
-                <div className="tc-sub">{r.due_date < s.t ? 'Overdue · ' : ''}{short(r.due_date)} · {r.jobs.property_address}</div>
+        {can('calendar') && (
+          <Tile icon="cal" tone="t-rose" title="Calendar" to="/calendar" action="Open Calendar"
+            badge={s.todayCount ? `${s.todayCount} today` : s.weekCount ? `${s.weekCount} this week` : null} badgeTone="info">
+            {s.events.length === 0 ? <p className="tc-empty">Nothing coming up.</p> : s.events.map((e, i) => (
+              <Link key={i} to={`/jobs/${e.job.id}`} className="tc-row">
+                <i className={`dot ${e.cls}`} />
+                <div className="grow">
+                  <div className="tc-title">{e.date === s.t ? 'Today' : short(e.date)}</div>
+                  <div className="tc-sub">{e.label} · {e.job.property_address}</div>
+                </div>
               </Link>
+            ))}
+          </Tile>
+        )}
+
+        {can('houses') && (
+          <Tile icon="house" tone="t-sage" title="Houses" to="/houses" action="Open Houses"
+            badge={s.cols.out.length ? `${s.cols.out.length} out` : null} badgeTone="ok">
+            <div className="tc-row tc-counts">
+              {[['quote', 'Quotes', 'c-quote'], ['booked', 'Booked', 'c-booked'], ['out', 'Out', 'c-out'], ['packup', 'Pack-ups', 'c-pack']].map(([k, l, c]) => (
+                <span key={k}><i className={`dot ${c}`} /><b>{s.cols[k].length}</b> {l}</span>
+              ))}
             </div>
-          ))}
-        </Tile>
+            {s.next ? (
+              <Link to={`/jobs/${s.next.id}`} className="tc-row tc-col">
+                <div className="row between"><span className="tc-title">Next install: {s.next.property_address}</span><span className="tc-sub">{short(s.next.install_date)}</span></div>
+                {s.nextProg.total > 0 ? (
+                  <>
+                    <div className="meter"><span style={{ width: `${(s.nextProg.packed / s.nextProg.total) * 100}%` }} /></div>
+                    <div className="tc-sub">{s.nextProg.packed} of {s.nextProg.total} pieces packed</div>
+                  </>
+                ) : <div className="tc-sub">No furniture picked yet</div>}
+              </Link>
+            ) : <p className="tc-empty">No installs booked.</p>}
+            {s.endingSoon > 0 && <div className="tc-row"><span className="tc-sub"><b>{s.endingSoon}</b> hire{s.endingSoon === 1 ? '' : 's'} ending this week</span></div>}
+          </Tile>
+        )}
+
+        {can('stock') && (
+          <Tile icon="box" tone="t-sand" title="Stock" to="/inventory" action="Open Stock"
+            badge={s.missing ? `${s.missing} missing` : s.repair ? `${s.repair} to repair` : null} badgeTone={s.missing ? 'urgent' : 'warn'}>
+            <div className="tc-row tc-col tc-hero">
+              <b>{s.out} of {s.pieces}</b>
+              <span className="tc-sub">pieces out on hire ({util}%)</span>
+              <div className="meter"><span style={{ width: `${util}%` }} /></div>
+            </div>
+            <div className="tc-row tc-counts">
+              <span><b>{s.inShed}</b> in shed</span>
+              <span><b>{s.repair}</b> repair</span>
+              <span><b>{s.missing}</b> missing</span>
+            </div>
+          </Tile>
+        )}
+
+        {can('money') && (
+          <Tile icon="money" tone="t-plum" title="Money" to="/business" action="Business details"
+            badge={s.owedTotal ? `${cash(s.owedTotal)} owed` : 'All paid'} badgeTone={s.owedTotal ? 'urgent' : 'ok'}>
+            <div className="tc-row tc-counts">
+              <span><b>{cash(s.booked)}</b> booked</span>
+              <span><b>{cash(s.received)}</b> received</span>
+            </div>
+            <div className="tc-mini" role="img" aria-label={`Booked work, last 6 months: ${s.last6.map((m) => `${m.label} ${cash(m.v)}`).join(', ')}`}>
+              {s.last6.map((m, i) => (
+                <div key={m.k} className="tm-col" title={`${m.label}: ${cash(m.v)}`}>
+                  <span className={`tm-bar ${i === 5 ? 'now' : ''}`} style={{ height: `${m.v ? Math.max(6, (m.v / max6) * 100) : 0}%` }} />
+                  <span className="tm-l">{m.label}</span>
+                </div>
+              ))}
+            </div>
+            {s.owing.slice(0, 2).map((j) => (
+              <Link key={j.id} to={`/jobs/${j.id}`} className="tc-row">
+                <div className="grow"><div className="tc-title">{j.property_address}</div><div className="tc-sub">{j.job_finance?.deposit_paid_on ? 'Deposit paid' : 'Not paid'}</div></div>
+                <b>{cash(j.owed)}</b>
+              </Link>
+            ))}
+          </Tile>
+        )}
+
+        {can('calendar') && (
+          <Tile icon="bell" tone="t-gold" title="Reminders" to="/calendar" action="Open Calendar"
+            badge={s.overdue ? `${s.overdue} overdue` : s.remCount ? `${s.remCount} open` : null} badgeTone={s.overdue ? 'urgent' : 'info'}>
+            {s.reminders.length === 0 ? <p className="tc-empty">No reminders. Add them on a house.</p> : s.reminders.map((r) => (
+              <div key={r.id} className={`tc-row ${r.due_date < s.t ? 'late' : ''}`}>
+                <input type="checkbox" aria-label="Done" onChange={() => tick(r)} />
+                <Link to={`/jobs/${r.job_id}`} className="grow">
+                  <div className="tc-title">{r.title}</div>
+                  <div className="tc-sub">{r.due_date < s.t ? 'Overdue · ' : ''}{short(r.due_date)} · {r.jobs.property_address}</div>
+                </Link>
+              </div>
+            ))}
+          </Tile>
+        )}
 
       </div>
       {scan && <Scanner onClose={() => setScan(false)} onCode={(code) => { setScan(false); nav(`/i/${code}`) }} />}

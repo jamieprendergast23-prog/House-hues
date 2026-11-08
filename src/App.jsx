@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { configured, isDemo } from './lib/supabase'
+import { configured, isDemo, supabase } from './lib/supabase'
 import { AuthProvider, useAuth } from './lib/auth'
 import { Toaster } from './lib/toast'
 import { ERP, PLANNER } from './lib/features'
@@ -44,10 +44,14 @@ export default function App() {
 }
 
 function Protected() {
-  const { session, loading, fieldMode } = useAuth()
+  const { session, loading, fieldMode, hasMain, can, isAdmin, home } = useAuth()
   const loc = useLocation()
   if (loading) return <Loading />
   if (!session) return <Navigate to="/login" state={{ from: loc.pathname }} replace />
+  if (!hasMain && !can('field')) return <NoAccess />
+
+  // only render a page if this person has that area switched on
+  const need = (p, el) => (p === 'admin' ? isAdmin : can(p)) ? el : <Navigate to={home} replace />
 
   if (fieldMode) {
     return (
@@ -66,24 +70,36 @@ function Protected() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={ERP ? <Dashboard /> : <Dashboard2 />} />
-        <Route path="/import" element={<ImportStock />} />
-        <Route path="/inventory" element={<Inventory />} />
-        <Route path="/inventory/:id" element={<ItemDetail />} />
-        <Route path="/i/:code" element={<ItemDetail byCode />} />
-        <Route path="/labels" element={<Labels />} />
-        <Route path="/jobs" element={<Jobs />} />
-        <Route path="/jobs/:id" element={<JobDetail />} />
-        {(ERP || PLANNER) && <Route path="/calendar" element={<CalendarPage />} />}
-        <Route path="/houses" element={<Houses />} />
-        <Route path="/business" element={<Business />} />
+        <Route path="/" element={can('dashboard') ? (ERP ? <Dashboard /> : <Dashboard2 />) : <Navigate to={home} replace />} />
+        <Route path="/import" element={need('stock', <ImportStock />)} />
+        <Route path="/inventory" element={need('stock', <Inventory />)} />
+        <Route path="/inventory/:id" element={need('stock', <ItemDetail />)} />
+        <Route path="/i/:code" element={need('stock', <ItemDetail byCode />)} />
+        <Route path="/labels" element={need('stock', <Labels />)} />
+        <Route path="/jobs" element={need('houses', <Jobs />)} />
+        <Route path="/jobs/:id" element={need('houses', <JobDetail />)} />
+        {(ERP || PLANNER) && <Route path="/calendar" element={need('calendar', <CalendarPage />)} />}
+        <Route path="/houses" element={need('houses', <Houses />)} />
+        <Route path="/business" element={need('money', <Business />)} />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
-        {ERP && <Route path="/requests" element={<Requests />} />}
-        <Route path="/team" element={<Team />} />
-        <Route path="/pick/:jobId" element={<PickList />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {ERP && <Route path="/requests" element={need('admin', <Requests />)} />}
+        <Route path="/team" element={need('admin', <Team />)} />
+        <Route path="/pick/:jobId" element={need('houses', <PickList />)} />
+        <Route path="*" element={<Navigate to={home} replace />} />
       </Routes>
     </Layout>
+  )
+}
+
+function NoAccess() {
+  return (
+    <div className="center-page">
+      <div className="card stack">
+        <h1>No access yet</h1>
+        <p>You’re signed in, but nothing has been switched on for you. Ask the owner to tick what you need on the Team page.</p>
+        <button className="btn" onClick={() => supabase.auth.signOut()}>Sign out</button>
+      </div>
+    </div>
   )
 }
 

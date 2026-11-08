@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { supabase, friendlyError } from '../lib/supabase'
 import { PIPELINES, TYPE_LABEL } from '../lib/constants'
 import { fmtDate, fmtLong, hireEnd, money, addDays } from '../lib/format'
+import { useAuth } from '../lib/auth'
 import { toast } from '../lib/toast'
 import { ERP, PLANNER } from '../lib/features'
 import Reminders from '../components/Reminders'
@@ -29,6 +30,7 @@ function holdRange(j) {
 }
 
 export default function JobDetail() {
+  const { can } = useAuth()
   const { id } = useParams()
   const isNew = id === 'new'
   const nav = useNavigate()
@@ -56,7 +58,7 @@ export default function JobDetail() {
     supabase.from('clients').select('id, name, agency, email, phone').order('name').then(({ data }) => setClients(data || []))
     if (isNew) return
     supabase.from('jobs').select('*').eq('id', id).single().then(({ data }) => { setJob(data); setSaved(data) })
-    supabase.from('job_finance').select('*').eq('job_id', id).maybeSingle().then(({ data }) => setFin(data || {}))
+    if (can('money')) supabase.from('job_finance').select('*').eq('job_id', id).maybeSingle().then(({ data }) => setFin(data || {}))
     loadLines()
   }, [id, isNew, loadLines])
 
@@ -240,7 +242,7 @@ export default function JobDetail() {
       </section>
 
 
-      {!ERP && PLANNER && (
+      {!ERP && PLANNER && can('money') && (
         <section className="card">
           <h2>Payment</h2>
           <div className="seg seg-big">
@@ -294,7 +296,7 @@ export default function JobDetail() {
       )}
 
       {!isNew && <Reminders jobId={id} />}
-      {!isNew && <BookingEmails job={job} client={client} />}
+      {!isNew && can('emails') && <BookingEmails job={job} client={client} />}
 
       {!isNew && ERP && <ClientMessage job={job} client={client} />}
       {!isNew && PLANNER && job.type === 'staging' && job.install_date && <HireCard job={job} client={client} fin={fin} />}

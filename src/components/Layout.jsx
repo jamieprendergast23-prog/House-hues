@@ -5,22 +5,24 @@ import { useAuth } from '../lib/auth'
 import { ERP } from '../lib/features'
 import { Brand } from './ui'
 
-const NAV = ERP ? [
-  ['/', 'Home', '⌂'],
-  ['/jobs', 'Jobs', '▤'],
-  ['/inventory', 'Stock', '▦'],
-  ['/calendar', 'Calendar', '▣'],
-  ['/requests', 'Requests', '✉'],
+// [path, label, icon, area needed]
+const ALL_NAV = ERP ? [
+  ['/', 'Home', '⌂', 'dashboard'],
+  ['/jobs', 'Jobs', '▤', 'houses'],
+  ['/inventory', 'Stock', '▦', 'stock'],
+  ['/calendar', 'Calendar', '▣', 'calendar'],
+  ['/requests', 'Requests', '✉', 'admin'],
 ] : [
-  ['/', 'Dashboard', '◎'],
-  ['/inventory', 'Stock', '▦'],
-  ['/houses', 'Houses', '⌂'],
-  ['/calendar', 'Calendar', '▣'],
-  ['/import', 'Import', '⇪'],
+  ['/', 'Dashboard', '◎', 'dashboard'],
+  ['/inventory', 'Stock', '▦', 'stock'],
+  ['/houses', 'Houses', '⌂', 'houses'],
+  ['/calendar', 'Calendar', '▣', 'calendar'],
+  ['/import', 'Import', '⇪', 'stock'],
 ]
 
 export default function Layout({ children }) {
-  const { setFieldMode } = useAuth()
+  const { setFieldMode, can, isAdmin } = useAuth()
+  const NAV = ALL_NAV.filter(([, , , p]) => (p === 'admin' ? isAdmin : can(p)))
   const nav = useNavigate()
   const [newCount, setNewCount] = useState(0)
 
@@ -40,10 +42,10 @@ export default function Layout({ children }) {
               {label}{to === '/requests' && newCount > 0 && <b className="badge">{newCount}</b>}
             </NavLink>
           ))}
-          <NavLink to="/team">Team</NavLink>
+          {isAdmin && <NavLink to="/team">Team</NavLink>}
         </nav>
         <div className="topbar-actions">
-          <button className="btn btn-small" onClick={() => { nav('/'); setTimeout(() => setFieldMode(true), 50) }}>Field mode</button>
+          {can('field') && <button className="btn btn-small" onClick={() => { nav('/'); setTimeout(() => setFieldMode(true), 50) }}>Field mode</button>}
           <button className="btn btn-small btn-ghost" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </div>
       </header>

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase, friendlyError, fetchAll, naturalCompare } from '../lib/supabase'
 import { CATEGORIES, CONDITIONS, ITEM_STATUS, UNPLACED } from '../lib/constants'
 import { fmtDate, compressImage, hireEnd } from '../lib/format'
+import { useAuth } from '../lib/auth'
 import { toast } from '../lib/toast'
 import { QrImg, Thumb, ItemWhere, Field, Loading, Empty } from '../components/ui'
 import DamagePanel from '../components/DamagePanel'
@@ -13,6 +14,8 @@ const BLANK = {
 }
 
 export default function ItemDetail({ byCode }) {
+  const { can } = useAuth()
+  const money = can('money')
   const { id, code } = useParams()
   const nav = useNavigate()
   const isNew = id === 'new'
@@ -98,13 +101,13 @@ export default function ItemDetail({ byCode }) {
         const rows = Array.from({ length: n }, () => fields)
         const { data, error } = await supabase.from('items').insert(rows).select('id')
         if (error) throw error
-        await supabase.from('item_costs').insert(data.map((r) => ({ item_id: r.id, ...costRow })))
+        if (money) await supabase.from('item_costs').insert(data.map((r) => ({ item_id: r.id, ...costRow })))
         toast(n > 1 ? `${n} items added` : 'Item added')
         nav(n > 1 ? '/inventory' : `/inventory/${data[0].id}`, { replace: true })
       } else {
         const { error } = await supabase.from('items').update(fields).eq('id', item.id)
         if (error) throw error
-        await supabase.from('item_costs').upsert({ item_id: item.id, ...costRow })
+        if (money) await supabase.from('item_costs').upsert({ item_id: item.id, ...costRow })
         toast('Saved')
         setEditing(false)
       }
@@ -161,15 +164,15 @@ export default function ItemDetail({ byCode }) {
         </div>
         <Field label="Notes"><textarea rows={3} value={item.notes || ''} onChange={set('notes')} /></Field>
 
-        <details className="card-soft">
-          <summary>Cost & value (only you see this)</summary>
+        {money && <details className="card-soft">
+          <summary>Cost & value (only people with Prices & money see this)</summary>
           <div className="grid2">
             <Field label="Paid ($)"><input type="number" step="0.01" inputMode="decimal" value={costs.purchase_cost || ''} onChange={setC('purchase_cost')} /></Field>
             <Field label="Replacement ($)"><input type="number" step="0.01" inputMode="decimal" value={costs.replacement_value || ''} onChange={setC('replacement_value')} /></Field>
             <Field label="Bought"><input type="date" value={costs.purchased_on || ''} onChange={setC('purchased_on')} /></Field>
             <Field label="From"><input value={costs.supplier || ''} onChange={setC('supplier')} /></Field>
           </div>
-        </details>
+        </details>}
 
         {isNew && (
           <Field label="How many identical?" hint="Each gets its own code and QR label. Handy for dining chairs, cushions, lamps.">

@@ -39,7 +39,7 @@ export default function MailConnect() {
       <h2>Email (Outlook)</h2>
       {status ? (
         <>
-          <p className="small">Connected: <b>{status.email}</b>. Emails with each client show on their booking, and you can reply from there. Only admins see emails.</p>
+          <p className="small">Connected: <b>{status.email}</b>. Emails with each client show on their booking, and you can reply from there. Only admins and people with Emails ticked see them.</p>
           <div className="row">
             <button type="button" className="btn" onClick={connect} disabled={busy}>Reconnect</button>
             <button type="button" className="btn btn-ghost danger" onClick={disconnect}>Disconnect</button>
@@ -47,7 +47,7 @@ export default function MailConnect() {
         </>
       ) : (
         <>
-          <p className="small muted">Connect the business Microsoft 365 email so each booking shows its emails, and you can reply or send from the booking. Only admins see emails.</p>
+          <p className="small muted">Connect the business Microsoft 365 email so each booking shows its emails, and you can reply or send from the booking. Only admins and people with Emails ticked see them.</p>
           <button type="button" className="btn btn-primary" onClick={connect} disabled={busy}>{busy ? 'Opening Microsoft…' : 'Connect Outlook'}</button>
         </>
       )}

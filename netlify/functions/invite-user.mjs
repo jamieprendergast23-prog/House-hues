@@ -19,7 +19,9 @@ export default async (req) => {
   const { data: me } = await admin.from('profiles').select('role').eq('id', u.user.id).single()
   if (me?.role !== 'admin') return json(403, { error: 'Only admins can invite people' })
 
-  const { email, full_name, role } = await req.json().catch(() => ({}))
+  const { email, full_name, role, permissions } = await req.json().catch(() => ({}))
+  const ALLOWED = ['dashboard', 'stock', 'houses', 'calendar', 'money', 'emails', 'field']
+  const perms = Array.isArray(permissions) ? permissions.filter((p) => ALLOWED.includes(p)) : ['field']
   if (!email) return json(400, { error: 'Email required' })
 
   const site = process.env.SITE_URL || process.env.URL
@@ -29,6 +31,6 @@ export default async (req) => {
   })
   if (error) return json(400, { error: error.message })
 
-  if (role === 'admin') await admin.from('profiles').update({ role: 'admin' }).eq('id', data.user.id)
+  await admin.from('profiles').update(role === 'admin' ? { role: 'admin' } : { role: 'crew', permissions: perms }).eq('id', data.user.id)
   return json(200, { ok: true })
 }

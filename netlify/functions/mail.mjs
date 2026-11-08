@@ -20,9 +20,10 @@ export default async (req) => {
   if (req.method !== 'POST') return json(405, { error: 'Method not allowed' })
   if (!configured()) return json(503, { error: 'Email isn’t set up on the server yet.' })
   const admin = db()
-  const user = await adminFrom(req, admin)
-  if (!user) return json(403, { error: 'Only admins can use email' })
   const p = await req.json().catch(() => ({}))
+  // disconnecting the business inbox is admin-only; reading/sending needs Emails access
+  const user = await adminFrom(req, admin, p.action === 'disconnect' ? undefined : 'emails')
+  if (!user) return json(403, { error: p.action === 'disconnect' ? 'Only admins can disconnect email' : 'You don’t have Emails access' })
 
   try {
     if (p.action === 'disconnect') {

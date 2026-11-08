@@ -72,3 +72,15 @@ export const EVENT_KINDS = {
   collection_date: { label: 'Collection', cls: 'ev-collect' },
   unpack_date: { label: 'Unpack', cls: 'ev-pack' },
 }
+
+// Areas the owner can switch on per person (Team page). Admins get everything.
+export const PERMS = [
+  ['dashboard', 'Dashboard', 'Home page tiles'],
+  ['stock', 'Stock', 'See, add and edit furniture, import lists, labels'],
+  ['houses', 'Houses', 'Bookings, clients, picking furniture, rooms, photos'],
+  ['calendar', 'Calendar', 'Calendar and reminders'],
+  ['money', 'Prices & money', 'Prices, payments, what stock cost, Business details'],
+  ['emails', 'Emails', 'Outlook emails on bookings'],
+  ['field', 'Field mode', 'Pick lists, scanning, packing and unpacking'],
+]
+export const MAIN_AREAS = ['dashboard', 'stock', 'houses', 'calendar']

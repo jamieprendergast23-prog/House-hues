@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase, friendlyError, fetchAll } from '../lib/supabase'
 import { parseCSV } from '../lib/csv'
 import { CATEGORIES } from '../lib/constants'
+import { useAuth } from '../lib/auth'
 import { toast } from '../lib/toast'
 import { compressImage } from '../lib/format'
 import { openWorkbook, readSheet, imageBlob, canShow } from '../lib/xlsx'
@@ -56,6 +57,8 @@ function matchCondition(raw) {
 const num = (v) => { const n = parseFloat(String(v || '').replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? n : null }
 
 export default function ImportStock() {
+  const { can } = useAuth()
+  const money = can('money')
   const nav = useNavigate()
   const [rows, setRows] = useState(null)
   const [hasHeader, setHasHeader] = useState(true)
@@ -208,7 +211,7 @@ export default function ImportStock() {
           if (error) throw error
           const noPhoto = hits.filter((h) => !h.photo_url).map((h) => h.id)
           if (noPhoto.length && photos.get(r)) await supabase.from('items').update({ photo_url: photos.get(r) }).in('id', noPhoto)
-          if (r.purchase_cost !== null || r.replacement_value !== null || r.supplier) {
+          if (money && (r.purchase_cost !== null || r.replacement_value !== null || r.supplier)) {
             await supabase.from('item_costs').upsert(hits.map((h) => ({
               item_id: h.id, purchase_cost: r.purchase_cost, replacement_value: r.replacement_value, supplier: r.supplier,
             })))
@@ -233,7 +236,7 @@ export default function ImportStock() {
         if (error) throw error
         const costs = data.map((d, k) => ({ item_id: d.id, purchase_cost: chunk[k].purchase_cost, replacement_value: chunk[k].replacement_value, supplier: chunk[k].supplier }))
           .filter((c) => c.purchase_cost !== null || c.replacement_value !== null || c.supplier)
-        if (costs.length) await supabase.from('item_costs').insert(costs)
+        if (money && costs.length) await supabase.from('item_costs').insert(costs)
       }
       toast([toUpdate && `${toUpdate} pieces updated`, all.length && `${all.length} added`].filter(Boolean).join(', ') || 'Nothing to change')
       nav('/inventory')
