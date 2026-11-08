@@ -15,7 +15,7 @@ const COLS = [
   ['packup', 'Pack ups'],
 ]
 
-function columnOf(j) {
+export function columnOf(j) {
   if (['enquiry', 'site_visit', 'quote_sent'].includes(j.status)) return 'quote'
   if (['accepted', 'booked', 'packing'].includes(j.status)) return 'booked'
   if (j.status === 'installed') return j.collection_date ? 'packup' : 'out'

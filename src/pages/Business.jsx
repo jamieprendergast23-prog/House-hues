@@ -149,7 +149,7 @@ export default function Business() {
   return (
     <div className="stack biz">
       <div className="page-head">
-        <h1>Business</h1>
+        <h1>Business details</h1>
         <div className="seg" role="tablist" aria-label="Period">
           {PERIODS.map(([k, l]) => <button key={k} type="button" className={period === k ? 'on' : ''} onClick={() => setPeriod(k)}>{l}</button>)}
         </div>

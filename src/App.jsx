@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './lib/auth'
 import { Toaster } from './lib/toast'
 import { ERP, PLANNER } from './lib/features'
 import Houses from './pages/Houses'
+import Dashboard2 from './pages/Dashboard2'
 import Business from './pages/Business'
 import Results from './pages/Results'
 import { Loading } from './components/ui'
@@ -79,6 +80,7 @@ function Protected() {
         <Route path="/houses" element={<Houses />} />
         <Route path="/results" element={<Results />} />
         <Route path="/business" element={<Business />} />
+        <Route path="/dashboard" element={<Dashboard2 />} />
         {ERP && <Route path="/requests" element={<Requests />} />}
         <Route path="/team" element={<Team />} />
         <Route path="/pick/:jobId" element={<PickList />} />

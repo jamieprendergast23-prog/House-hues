@@ -40,7 +40,7 @@ export default function Layout({ children }) {
               {label}{to === '/requests' && newCount > 0 && <b className="badge">{newCount}</b>}
             </NavLink>
           ))}
-          {!ERP && <NavLink to="/business">Business</NavLink>}
+          {!ERP && <NavLink to="/dashboard">Dashboard</NavLink>}
           {!ERP && <NavLink to="/results">Results</NavLink>}
           <NavLink to="/team">Team</NavLink>
         </nav>
