@@ -66,6 +66,7 @@ export default function StockHome() {
         <button className="quick-btn primary" onClick={() => setScan(true)}><span>⌗</span>Scan</button>
         <Link className="quick-btn" to="/inventory/new"><span>＋</span>Add item</Link>
         <Link className="quick-btn" to="/import"><span>⇪</span>Import list</Link>
+        <Link className="quick-btn" to="/business"><span>$</span>Business</Link>
         <Link className="quick-btn" to="/results"><span>↗</span>Results</Link>
       </div>
 

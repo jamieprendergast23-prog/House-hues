@@ -620,3 +620,23 @@ button.house-card { width: 100%; text-align: left; font: inherit; cursor: pointe
 
 .reminder-form > input:first-child { flex: 1 1 100%; }
 .reminder-form > input[type=date] { flex: 1 1 auto; }
+
+/* business dashboard */
+.biz .page-head { flex-wrap: wrap; gap: 10px; }
+.biz .seg { flex-wrap: wrap; }
+.biz .seg button { min-height: 34px; padding: 0 10px; font-size: .85rem; }
+.biz .stat b { font-size: 1.6rem; }
+.stat.warn b { color: #a4472f; }
+.biz-grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .biz-grid { grid-template-columns: 1fr 1fr; } }
+.biz-grid .card { margin: 0; }
+.biz-thumb { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: var(--line); flex: none; }
+.meter { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; margin: 6px 0; }
+.meter span { display: block; height: 100%; background: #8c7a66; border-radius: 99px; }
+.mbars svg { width: 100%; height: auto; display: block; touch-action: manipulation; overflow: visible; }
+.mb-axis { stroke: var(--line); stroke-width: 1; }
+.mb-bar { fill: #c9b9a6; transition: fill .12s; }
+.mb-bar.now { fill: #8c7a66; }
+.mb-bar.hot { fill: #5f5143; }
+.mb-label { font-size: 11px; fill: var(--muted); }
+.mb-tip { min-height: 1.5em; margin-top: 4px; }

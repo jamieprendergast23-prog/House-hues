@@ -268,7 +268,11 @@ export default function JobDetail() {
               )
             })}
           </div>
-          <p className="small muted">Save changes to keep it.</p>
+          <div className="grid2" style={{ marginTop: 10 }}>
+            <Field label="Price ($)" hint="What you’re charging for this house"><input type="number" step="1" inputMode="decimal" value={fin.quote_amount ?? ''} onChange={setF('quote_amount')} /></Field>
+            <Field label="Deposit ($)"><input type="number" step="1" inputMode="decimal" value={fin.deposit_amount ?? ''} onChange={setF('deposit_amount')} /></Field>
+          </div>
+          <p className="small muted">Only admins see this. Save changes to keep it.</p>
         </section>
       )}
 
