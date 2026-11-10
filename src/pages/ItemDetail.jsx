@@ -7,6 +7,7 @@ import { useAuth } from '../lib/auth'
 import { toast } from '../lib/toast'
 import { QrImg, Thumb, ItemWhere, Field, Loading, Empty } from '../components/ui'
 import DamagePanel from '../components/DamagePanel'
+import { RetireDialog, SaleCard } from '../components/SaleCard'
 
 const BLANK = {
   name: '', sku: '', subcategory: '', category: 'Furniture', colour: '', dimensions: '', description: '',
@@ -20,6 +21,7 @@ export default function ItemDetail({ byCode }) {
   const nav = useNavigate()
   const isNew = id === 'new'
   const [item, setItem] = useState(isNew ? BLANK : null)
+  const [retiring, setRetiring] = useState(false)
   const [costs, setCosts] = useState({})
   const [history, setHistory] = useState([])
   // houses it has actually gone out to (packed), not just booked
@@ -234,6 +236,7 @@ export default function ItemDetail({ byCode }) {
         {item.notes && <p className="pre small">{item.notes}</p>}
       </div>
 
+      {item.status === 'retired' && <SaleCard item={item} onChange={(f) => setItem({ ...item, ...f })} />}
       <DamagePanel item={item} onChange={(f) => setItem({ ...item, ...f })} />
 
       <h2>History</h2>
@@ -255,13 +258,11 @@ export default function ItemDetail({ byCode }) {
 
       <div className="row">
         {item.status !== 'retired' && (
-          <button className="btn btn-ghost" onClick={async () => {
-            await supabase.from('items').update({ status: 'retired' }).eq('id', item.id)
-            setItem({ ...item, status: 'retired' }); toast('Retired')
-          }}>Retire item</button>
+          <button className="btn btn-ghost" onClick={() => setRetiring(true)}>Retire item</button>
         )}
         <button className="btn btn-ghost danger" onClick={remove}>Delete</button>
       </div>
+      {retiring && <RetireDialog item={item} onClose={() => setRetiring(false)} onDone={(f) => { setRetiring(false); setItem({ ...item, ...f }) }} />}
     </div>
   )
 }

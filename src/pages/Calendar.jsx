@@ -224,7 +224,7 @@ export default function CalendarPage() {
       </section>
       <p className="small muted">Click a day to open it, double-click to add a note. Tap anything to change it. On a computer you can also drag things to another day.</p>
 
-      {openDay && <DaySheet iso={openDay} events={byDate[openDay] || []} onHire={onHire(openDay)}
+      {openDay && <DaySheet iso={openDay} events={byDate[openDay] || []}
         onClose={() => setOpenDay(null)} onEdit={(e) => { setOpenDay(null); setEdit(e) }}
         onAdd={() => { setAdding(openDay); setOpenDay(null) }} onTick={tick} />}
       {edit && <EventEditor e={edit} canDates={canDates} onClose={() => setEdit(null)}
@@ -236,7 +236,7 @@ export default function CalendarPage() {
 }
 
 /** Everything on one day: tap an item to edit it, or add a note. */
-function DaySheet({ iso, events, onHire, onClose, onEdit, onAdd, onTick }) {
+function DaySheet({ iso, events, onClose, onEdit, onAdd, onTick }) {
   const d = parseDate(iso)
   return (
     <Modal title={d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })} onClose={onClose}>
@@ -261,11 +261,6 @@ function DaySheet({ iso, events, onHire, onClose, onEdit, onAdd, onTick }) {
               ))}
             </ul>
           )}
-        {onHire.length > 0 && (
-          <p className="small muted" style={{ margin: 0 }}>
-            Furniture out at: {onHire.map((j) => j.property_address).join(', ')}
-          </p>
-        )}
         <div className="row sticky-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>Close</button>
           <button type="button" className="btn btn-primary grow" onClick={onAdd}><Icon name="plus" size={18} /> Add note or date</button>

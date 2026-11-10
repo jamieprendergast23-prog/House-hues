@@ -48,7 +48,7 @@ const STOCK = [
 function seed() {
   const db = {
     profiles: [ADMIN, CREW, STYLIST], items: [], item_costs: [], clients: [], jobs: [],
-    job_finance: [], job_items: [], booking_requests: [], item_events: [], job_photos: [], reminders: [], _itemSeq: 1, _jobSeq: 1001,
+    job_finance: [], job_items: [], booking_requests: [], item_events: [], job_photos: [], reminders: [], shop_orders: [], _itemSeq: 1, _jobSeq: 1001,
   }
   const skus = {}, perLetter = {}
   const skuFor = (name, cat) => skus[name] ||= `${cat[0]}${(perLetter[cat[0]] = (perLetter[cat[0]] || 0) + 1)}`
@@ -120,6 +120,13 @@ function seed() {
       property_address: '4 Calabria Rd', suburb: 'Hanwood', service_type: 'consult', preferred_date: d(5), property_type: 'House', bedrooms: 4,
       occupied: true, message: 'Want to restyle before selling.', status: 'new', job_id: null },
   )
+  // a few retired pieces listed in the shop
+  const forSale = [['Rattan accent chair', 145, 'Small mark on the left arm, priced to suit.'], ['Linen table lamp', 60, null], ['Oak side table', 120, null], ['Abstract canvas, 90 x 120', 180, 'Hand painted.']]
+  forSale.forEach(([name, price, note], k) => {
+    const used = new Set(db.job_items.map((l) => l.item_id))
+    const i = db.items.filter((x) => x.status === 'available' && !used.has(x.id))[k * 2 + 1]
+    if (i) Object.assign(i, { status: 'retired', for_sale: true, sale_price: price, sale_note: note, name })
+  })
   // a few reminders so the calendar shows them
   const js = db.jobs.filter((j) => j.install_date)
   const rem = (j, off, title) => db.reminders.push({ id: uid(), job_id: j.id, due_date: addDays(j.install_date, off), title, note: null, done_at: null, created_at: nowISO() })
@@ -325,6 +332,8 @@ class Query {
 // ---------- RPCs ----------
 const byCode = (code) => db.items.find((i) => i.code === String(code).trim().toUpperCase())
 const RPC = {
+  sale_items: () => db.items.filter((i) => i.for_sale && !i.sold_at && i.status === 'retired' && Number(i.sale_price) > 0)
+    .map((i) => ({ id: i.id, name: i.name, category: i.category, colour: i.colour, dimensions: i.dimensions, description: i.description, photo_url: i.photo_url, sale_price: i.sale_price, sale_note: i.sale_note, listed_at: i.updated_at })),
   available_items({ p_job_id }) {
     const j = db.jobs.find((x) => x.id === p_job_id)
     const p = j && hold(j)
@@ -459,4 +468,14 @@ export async function demoBookingRequest(f) {
     preferred_date: f.preferred_date || null, property_type: f.property_type, bedrooms: f.bedrooms ? Number(f.bedrooms) : null,
     occupied: f.occupied === '' ? null : f.occupied === 'true', message: f.message || null, status: 'new', job_id: null,
   })
+}
+
+/** Demo stand-in for Stripe: mark the pieces sold and record an order. */
+export async function demoCheckout(ids) {
+  const now = new Date().toISOString()
+  const list = db.items.filter((i) => ids.includes(i.id))
+  list.forEach((i) => { i.sold_at = now })
+  db.shop_orders.push({ id: uid(), stripe_session: `demo_${uid()}`, item_ids: ids, items: list.map((i) => ({ id: i.id, name: i.name, price: Number(i.sale_price) })),
+    total: list.reduce((a, i) => a + Number(i.sale_price), 0), buyer_name: 'Demo buyer', buyer_email: 'buyer@example.com', buyer_phone: '0400 000 000',
+    note: null, status: 'paid', collected_at: null, created_at: now })
 }

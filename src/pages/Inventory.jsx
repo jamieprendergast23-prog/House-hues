@@ -9,7 +9,7 @@ import { Loading, Empty, Modal, ItemWhere, ConditionPill } from '../components/u
 import Scanner from '../components/Scanner'
 import Icon from '../components/Icon'
 
-const WHERE = [['all', 'All'], ['in', 'In shed'], ['out', 'Out on jobs'], ['repair', 'Repair'], ['retired', 'Retired']]
+const WHERE = [['all', 'All'], ['in', 'In shed'], ['out', 'Out on jobs'], ['repair', 'Repair'], ['sale', 'For sale'], ['retired', 'Retired']]
 const PAGE = 120 // tiles rendered at a time; "Show more" for the rest
 
 const isIn = (i) => !i.out_address && i.status === 'available'
@@ -67,7 +67,8 @@ export default function Inventory() {
       if (where === 'in' && !isIn(i)) return false
       if (where === 'out' && !i.out_address) return false
       if (where === 'repair' && i.status !== 'repair') return false
-      if (where === 'retired' ? i.status !== 'retired' : i.status === 'retired') return false
+      if (where === 'sale') { if (!(i.status === 'retired' && i.for_sale && !i.sold_at)) return false }
+      else if (where === 'retired' ? i.status !== 'retired' : i.status === 'retired') return false
       if (!s) return true
       return [i.name, i.sku, i.code, i.subcategory, i.colour, i.shed_location, i.category, i.description].some((v) => v?.toLowerCase().includes(s))
     })
@@ -235,7 +236,8 @@ export default function Inventory() {
                     {g.inCount > 0 && <span className="st st-in">{g.inCount} in</span>}
                     {g.outCount > 0 && <span className="st st-out">{g.outCount} out</span>}
                     {g.repairCount > 0 && <span className="st st-rep">{g.repairCount} repair</span>}
-                    {where === 'retired' && <span className="st">retired</span>}
+                    {where === 'retired' && <span className="st">{g.pieces.some((p) => p.sold_at) ? 'sold' : g.pieces.some((p) => p.for_sale) ? 'for sale' : 'retired'}</span>}
+                    {where === 'sale' && <span className="st st-in">${g.pieces[0].sale_price}</span>}
                   </div>
                 </div>
               </button>

@@ -26,17 +26,21 @@ import Team from './pages/Team'
 import FieldHome from './field/FieldHome'
 import PickList from './field/PickList'
 import FieldScan from './field/FieldScan'
+import Shop from './shop/Shop'
+import ShopOrders from './pages/ShopOrders'
 import FieldItem from './field/FieldItem'
 
 export default function App() {
+  const loc = useLocation()
   if (!configured) return <NotConfigured />
   return (
     <AuthProvider>
       <Toaster />
-      {isDemo && <div className="demo-bar">Demo with sample data. Changes reset on refresh.</div>}
+      {isDemo && !loc.pathname.startsWith('/sale') && <div className="demo-bar">Demo with sample data. Changes reset on refresh.</div>}
       <Routes>
         {ERP && <Route path="/book" element={<Book />} />}
         <Route path="/login" element={<Login />} />
+        <Route path="/sale/*" element={<Shop />} />
         <Route path="/*" element={<Protected />} />
       </Routes>
     </AuthProvider>
@@ -81,6 +85,7 @@ function Protected() {
         {(ERP || PLANNER) && <Route path="/calendar" element={need('calendar', <CalendarPage />)} />}
         <Route path="/houses" element={need('houses', <Houses />)} />
         <Route path="/business" element={need('money', <Business />)} />
+        <Route path="/shop" element={need('stock', <ShopOrders />)} />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         {ERP && <Route path="/requests" element={need('admin', <Requests />)} />}
         <Route path="/team" element={need('admin', <Team />)} />

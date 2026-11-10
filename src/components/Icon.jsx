@@ -24,6 +24,7 @@ const P = {
   list: <path d="M4 6h16M4 12h16M4 18h16" />,
   image: <><rect x="4" y="5" width="16" height="14" rx="1.5" /><circle cx="9" cy="10" r="1.6" /><path d="M20 16l-5-5-8 8" /></>,
   money: <path d="M3 7h18v10H3zM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM6 10v4M18 10v4" />,
+  bag: <path d="M5 7h14l-1.4 11.2a1.5 1.5 0 0 1-1.5 1.3H7.9a1.5 1.5 0 0 1-1.5-1.3L5 7zM9 7V6a3 3 0 0 1 6 0v1" />,
   bell: <path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4l2-2zM10 20a2 2 0 0 0 4 0" />,
 }
 

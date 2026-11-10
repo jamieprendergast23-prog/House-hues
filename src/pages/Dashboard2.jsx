@@ -39,11 +39,12 @@ export default function Dashboard2() {
 
   const load = () => Promise.all([
     fetchAll(() => supabase.from('jobs').select('*, clients(name), job_finance(*)').order('created_at')),
-    fetchAll(() => supabase.from('v_items').select('id, status, out_job_id, condition').order('code')),
+    fetchAll(() => supabase.from('v_items').select('id, status, out_job_id, condition, for_sale, sold_at').order('code')),
     fetchAll(() => supabase.from('job_items').select('id, job_id, packed_at, returned_at, missing_at').order('id')),
     supabase.from('reminders').select('*, jobs(id, property_address, status)').is('done_at', null).order('due_date').then((r) => r.data || []),
-  ]).then(([jobs, items, lines, reminders]) => setD({ jobs, items, lines, reminders: reminders.filter((r) => !r.job_id || (r.jobs && r.jobs.status !== 'cancelled')) }))
-    .catch((e) => { toast(friendlyError(e), 'error'); setD({ jobs: [], items: [], lines: [], reminders: [] }) })
+    supabase.from('shop_orders').select('id, total, status, created_at, buyer_name, items').order('created_at', { ascending: false }).then((r) => r.data || []),
+  ]).then(([jobs, items, lines, reminders, orders]) => setD({ jobs, items, lines, orders, reminders: reminders.filter((r) => !r.job_id || (r.jobs && r.jobs.status !== 'cancelled')) }))
+    .catch((e) => { toast(friendlyError(e), 'error'); setD({ jobs: [], items: [], lines: [], reminders: [], orders: [] }) })
   useEffect(() => { load() }, [])
 
   const s = useMemo(() => {
@@ -86,6 +87,11 @@ export default function Dashboard2() {
       return { k, label: dt.toLocaleDateString('en-AU', { month: 'short' }), v: live.filter((j) => WON.has(j.status) && (dateOf(j) || '').startsWith(k)).reduce((a, j) => a + price(j), 0) }
     })
 
+    // shop
+    const shopListed = d.items.filter((i) => i.status === 'retired' && i.for_sale && !i.sold_at).length
+    const toHand = d.orders.filter((o) => o.status === 'paid')
+    const shopMonth = d.orders.filter((o) => o.created_at.slice(0, 7) === ym && o.status !== 'refunded').reduce((a, o) => a + Number(o.total), 0)
+
     // reminders
     const overdue = d.reminders.filter((r) => r.due_date < t)
 
@@ -96,6 +102,7 @@ export default function Dashboard2() {
       pieces: pieces.length, out, repair, missing, inShed: pieces.length - out - repair,
       booked: month.reduce((a, j) => a + price(j), 0), received: month.reduce((a, j) => a + got(j), 0), monthJobs: month.length,
       owing, owedTotal: owing.reduce((a, j) => a + j.owed, 0), last6,
+      shopListed, toHand, shopMonth,
       reminders: d.reminders.slice(0, 4), overdue: overdue.length, remCount: d.reminders.length,
     }
   }, [d])
@@ -198,6 +205,23 @@ export default function Dashboard2() {
                 <b>{cash(j.owed)}</b>
               </Link>
             ))}
+          </Tile>
+        )}
+
+        {can('stock') && (
+          <Tile icon="bag" tone="t-sand" title="Shop" to="/shop" action="Open Shop"
+            badge={s.toHand.length ? `${s.toHand.length} to hand over` : null} badgeTone="urgent">
+            <div className="tc-row tc-counts">
+              <span><b>{s.shopListed}</b> listed</span>
+              <span><b>{cash(s.shopMonth)}</b> sold this month</span>
+            </div>
+            {s.toHand.slice(0, 2).map((o) => (
+              <Link key={o.id} to="/shop" className="tc-row">
+                <div className="grow"><div className="tc-title">{o.buyer_name || 'Buyer'}</div><div className="tc-sub">{(o.items || []).map((i) => i.name).join(', ')}</div></div>
+                <b>{cash(o.total)}</b>
+              </Link>
+            ))}
+            {s.toHand.length === 0 && <p className="tc-empty">No orders waiting.</p>}
           </Tile>
         )}
 

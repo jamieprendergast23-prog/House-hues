@@ -43,6 +43,7 @@ export default function Layout({ children }) {
               {label}{to === '/requests' && newCount > 0 && <b className="badge">{newCount}</b>}
             </NavLink>
           ))}
+          {can('stock') && !ERP && <NavLink to="/shop">Shop</NavLink>}
           {isAdmin && <NavLink to="/team">Team</NavLink>}
         </nav>
         <div className="topbar-actions">
