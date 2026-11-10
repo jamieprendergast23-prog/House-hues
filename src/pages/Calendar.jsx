@@ -4,7 +4,9 @@ import { supabase, friendlyError } from '../lib/supabase'
 import { toast } from '../lib/toast'
 import { EVENT_KINDS } from '../lib/constants'
 import { toISO, today, hireEnd, parseDate, addDays } from '../lib/format'
-import { Loading, TypeTag } from '../components/ui'
+import { Loading, TypeTag, Modal, Field } from '../components/ui'
+import { useAuth } from '../lib/auth'
+import Icon from '../components/Icon'
 
 export function jobEvents(jobs) {
   const ev = []
@@ -12,7 +14,7 @@ export function jobEvents(jobs) {
     if (j.status === 'cancelled') continue
     const dates = { ...j, hire_end: j.type === 'staging' ? hireEnd(j) : null }
     for (const k of Object.keys(EVENT_KINDS)) {
-      if (dates[k]) ev.push({ date: dates[k], kind: k, job: j, ...EVENT_KINDS[k] })
+      if (dates[k]) ev.push({ date: dates[k], kind: k, field: k === 'hire_end' ? 'hire_end_date' : k, job: j, ...EVENT_KINDS[k] })
     }
   }
   return ev.sort((a, b) => a.date.localeCompare(b.date))
@@ -25,13 +27,46 @@ export default function CalendarPage() {
   const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })
   const [day, setDay] = useState(today())
   const [reminders, setReminders] = useState([])
+  const [edit, setEdit] = useState(null)      // event being edited
+  const [adding, setAdding] = useState(null)  // date to add something on
+  const [drag, setDrag] = useState(null)
+  const { can } = useAuth()
+  const canDates = can('houses')
 
   const loadReminders = () => supabase.from('reminders').select('*, jobs(id, property_address, type, status)').order('due_date')
     .then(({ data }) => setReminders((data || []).filter((r) => r.jobs && r.jobs.status !== 'cancelled')))
-  useEffect(() => {
-    supabase.from('jobs').select('*, clients(name)').neq('status', 'cancelled').then(({ data }) => setJobs(data || []))
-    loadReminders()
-  }, [])
+  const loadJobs = () => supabase.from('jobs').select('*, clients(name)').neq('status', 'cancelled').then(({ data }) => setJobs(data || []))
+  useEffect(() => { loadJobs(); loadReminders() }, [])
+
+  /** Move an event to a new day (or clear it with null). */
+  const moveEvent = async (e, to) => {
+    if (e.reminder) {
+      const { error } = await supabase.from('reminders').update({ due_date: to }).eq('id', e.reminder.id)
+      if (error) return toast(friendlyError(error), 'error'), false
+      loadReminders(); return true
+    }
+    if (!canDates) return toast('You don’t have Houses access to change dates', 'error'), false
+    const patch = { [e.field]: to }
+    // installs keep the same hire length unless the end date was set by hand
+    const { error } = await supabase.from('jobs').update(patch).eq('id', e.job.id)
+    if (error) return toast(friendlyError(error), 'error'), false
+    loadJobs(); return true
+  }
+  const dropOn = async (iso) => {
+    const e = drag; setDrag(null)
+    if (!e || e.date === iso) return
+    if (await moveEvent(e, iso)) toast(`${e.label} moved to ${parseDate(iso).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}`)
+  }
+  const dnd = (iso) => ({
+    onDragOver: (ev) => { if (drag) { ev.preventDefault(); ev.currentTarget.classList.add('drop') } },
+    onDragLeave: (ev) => ev.currentTarget.classList.remove('drop'),
+    onDrop: (ev) => { ev.preventDefault(); ev.currentTarget.classList.remove('drop'); dropOn(iso) },
+  })
+  const dragProps = (e) => ((e.reminder || canDates) ? {
+    draggable: true,
+    onDragStart: (ev) => { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', e.label); setDrag(e) },
+    onDragEnd: () => setDrag(null),
+  } : {})
 
   const tick = async (r) => {
     const { error } = await supabase.from('reminders').update({ done_at: r.done_at ? null : new Date().toISOString() }).eq('id', r.id)
@@ -113,7 +148,7 @@ export default function CalendarPage() {
           const iso = toISO(d)
           const evs = byDate[iso] || []
           return (
-            <button key={iso} onClick={() => setDay(iso)}
+            <button key={iso} onClick={() => setDay(iso)} {...dnd(iso)}
               className={`cal-cell ${d.getMonth() !== month.getMonth() ? 'other' : ''} ${iso === today() ? 'is-today' : ''} ${iso === day ? 'sel' : ''} ${weekSet.has(iso) ? 'in-week' : ''}`}>
               <span className="cal-num">{d.getDate()}</span>
               <span className="cal-evs">
@@ -140,21 +175,23 @@ export default function CalendarPage() {
             const evs = byDate[iso] || []
             const d = parseDate(iso)
             return (
-              <div key={iso} className={`week-day ${iso === today() ? 'is-today' : ''} ${iso === day ? 'sel' : ''}`} onClick={() => setDay(iso)}>
+              <div key={iso} className={`week-day ${iso === today() ? 'is-today' : ''} ${iso === day ? 'sel' : ''}`} onClick={() => setDay(iso)} {...dnd(iso)}>
                 <div className="wd-head">
                   <span>{d.toLocaleDateString('en-AU', { weekday: 'short' })}</span>
                   <b>{d.getDate()}</b>
+                  <button type="button" className="wd-add" aria-label={`Add on ${d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })}`}
+                    onClick={(ev) => { ev.stopPropagation(); setAdding(iso) }}><Icon name="plus" size={16} /></button>
                 </div>
-                {evs.length === 0 ? <div className="wd-empty">–</div> : evs.map((e, i) => e.reminder ? (
-                  <label key={i} className={`wd-ev ${e.cls}`} onClick={(ev) => ev.stopPropagation()}>
-                    <span className="wd-ev-label"><input type="checkbox" checked={Boolean(e.reminder.done_at)} onChange={() => tick(e.reminder)} /> {e.label}</span>
-                    <Link to={`/jobs/${e.job.id}`} className="wd-ev-addr">{e.job.property_address}</Link>
-                  </label>
-                ) : (
-                  <Link key={i} to={`/jobs/${e.job.id}`} className={`wd-ev ${e.cls}`}>
-                    <span className="wd-ev-label">{e.label}</span>
+                {evs.length === 0 ? <div className="wd-empty">–</div> : evs.map((e, i) => (
+                  <div key={i} role="button" tabIndex={0} className={`wd-ev ${e.cls}`} {...dragProps(e)}
+                    onClick={(ev) => { ev.stopPropagation(); setEdit(e) }}
+                    onKeyDown={(ev) => { if (ev.key === 'Enter') setEdit(e) }}>
+                    <span className="wd-ev-label">
+                      {e.reminder && <input type="checkbox" checked={Boolean(e.reminder.done_at)} aria-label="Done"
+                        onClick={(ev) => ev.stopPropagation()} onChange={() => tick(e.reminder)} />} {e.label}
+                    </span>
                     <span className="wd-ev-addr">{e.job.property_address}</span>
-                  </Link>
+                  </div>
                 ))}
               </div>
             )
@@ -171,7 +208,126 @@ export default function CalendarPage() {
           </div>
         )}
       </section>
+      <p className="small muted">Tap anything to change it, or use + on a day to add. On a computer you can also drag things to another day.</p>
+
+      {edit && <EventEditor e={edit} canDates={canDates} onClose={() => setEdit(null)}
+        onSaved={() => { setEdit(null); loadJobs(); loadReminders() }} />}
+      {adding && <AddOnDay date={adding} jobs={jobs} canDates={canDates} onClose={() => setAdding(null)}
+        onSaved={() => { setAdding(null); loadJobs(); loadReminders() }} />}
     </div>
+  )
+}
+
+const longDate = (iso) => parseDate(iso).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })
+
+/** Change the date of a house event, or edit a reminder. */
+function EventEditor({ e, canDates, onClose, onSaved }) {
+  const r = e.reminder
+  const [date, setDate] = useState(e.date)
+  const [title, setTitle] = useState(r?.title || '')
+  const [busy, setBusy] = useState(false)
+  const autoEnd = e.field === 'install_date' && e.job.type === 'staging' && !e.job.hire_end_date
+
+  const run = async (fn, msg) => {
+    setBusy(true)
+    const { error } = await fn()
+    setBusy(false)
+    if (error) return toast(friendlyError(error), 'error')
+    toast(msg); onSaved()
+  }
+  const save = (ev) => {
+    ev.preventDefault()
+    if (r) return run(() => supabase.from('reminders').update({ title: title.trim() || r.title, due_date: date }).eq('id', r.id), 'Reminder updated')
+    return run(() => supabase.from('jobs').update({ [e.field]: date || null }).eq('id', e.job.id), `${e.label} moved to ${longDate(date)}`)
+  }
+  const remove = () => {
+    if (r) {
+      if (!confirm('Delete this reminder?')) return
+      return run(() => supabase.from('reminders').delete().eq('id', r.id), 'Reminder deleted')
+    }
+    if (!confirm(`Remove the ${e.label.toLowerCase()} date from ${e.job.property_address}?`)) return
+    return run(() => supabase.from('jobs').update({ [e.field]: null }).eq('id', e.job.id), `${e.label} date removed`)
+  }
+  const editable = r || canDates
+
+  return (
+    <Modal title={r ? 'Reminder' : e.label} onClose={onClose}>
+      <form className="stack" onSubmit={save}>
+        <p className="small muted" style={{ margin: 0 }}>{e.job.property_address}</p>
+        {r && <Field label="What"><input value={title} onChange={(ev) => setTitle(ev.target.value)} /></Field>}
+        <Field label={r ? 'Remind on' : 'Date'}>
+          <input type="date" required value={date || ''} onChange={(ev) => setDate(ev.target.value)} disabled={!editable} />
+        </Field>
+        {autoEnd && <p className="small muted" style={{ margin: 0 }}>Hire end moves with it ({e.job.hire_weeks || 6} weeks).</p>}
+        {e.field === 'hire_end_date' && <p className="small muted" style={{ margin: 0 }}>Sets the hire end for this house by hand.</p>}
+        {!editable && <p className="small muted">You can view this, but changing house dates needs Houses access.</p>}
+        <div className="row sticky-actions">
+          {editable && e.field !== 'hire_end_date' && <button type="button" className="btn btn-ghost danger" onClick={remove} disabled={busy}>{r ? 'Delete' : 'Remove date'}</button>}
+          {canDates && <Link className="btn" to={`/jobs/${e.job.id}`}>Open house</Link>}
+          {editable && <button className="btn btn-primary grow" disabled={busy || !date}>{busy ? 'Saving…' : 'Save'}</button>}
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+const ADD_KINDS = [
+  ['reminder', 'Reminder'],
+  ['site_visit_date', 'Site visit'],
+  ['consult_date', 'Consult'],
+  ['pack_date', 'Packing'],
+  ['install_date', 'Install'],
+  ['collection_date', 'Collection'],
+  ['unpack_date', 'Unpack'],
+]
+
+/** Add a reminder, or set one of a house's dates, on a chosen day. */
+function AddOnDay({ date: d0, jobs, canDates, onClose, onSaved }) {
+  const [kind, setKind] = useState('reminder')
+  const [jobId, setJobId] = useState('')
+  const [title, setTitle] = useState('')
+  const [date, setDate] = useState(d0)
+  const [busy, setBusy] = useState(false)
+  const houses = [...jobs].filter((j) => !['complete', 'cancelled'].includes(j.status))
+    .sort((a, b) => (a.property_address || '').localeCompare(b.property_address || ''))
+  const kinds = canDates ? ADD_KINDS : ADD_KINDS.slice(0, 1)
+  const job = houses.find((j) => j.id === jobId)
+  const replacing = kind !== 'reminder' && job?.[kind]
+
+  const save = async (ev) => {
+    ev.preventDefault()
+    if (!jobId) return toast('Pick a house', 'error')
+    setBusy(true)
+    const { error } = kind === 'reminder'
+      ? await supabase.from('reminders').insert({ job_id: jobId, title: title.trim(), due_date: date })
+      : await supabase.from('jobs').update({ [kind]: date }).eq('id', jobId)
+    setBusy(false)
+    if (error) return toast(friendlyError(error), 'error')
+    toast(`${kind === 'reminder' ? 'Reminder' : ADD_KINDS.find(([k]) => k === kind)[1]} set for ${longDate(date)}`)
+    onSaved()
+  }
+
+  return (
+    <Modal title={`Add on ${parseDate(d0).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })}`} onClose={onClose}>
+      <form className="stack" onSubmit={save}>
+        <div className="chips">
+          {kinds.map(([k, l]) => <button type="button" key={k} className={`chip ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>{l}</button>)}
+        </div>
+        <Field label="House">
+          <select required value={jobId} onChange={(ev) => setJobId(ev.target.value)}>
+            <option value="">Choose a house…</option>
+            {houses.map((j) => <option key={j.id} value={j.id}>{j.property_address}</option>)}
+          </select>
+        </Field>
+        {kind === 'reminder' && <Field label="What"><input required value={title} onChange={(ev) => setTitle(ev.target.value)} placeholder="e.g. Call agent to confirm access" /></Field>}
+        <Field label="Date"><input type="date" required value={date} onChange={(ev) => setDate(ev.target.value)} /></Field>
+        {replacing && <p className="small muted" style={{ margin: 0 }}>This replaces its current date ({longDate(job[kind])}).</p>}
+        <div className="row sticky-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary grow" disabled={busy}>{busy ? 'Saving…' : 'Add'}</button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 
