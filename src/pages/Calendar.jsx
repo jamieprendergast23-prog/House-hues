@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, friendlyError } from '../lib/supabase'
 import { toast } from '../lib/toast'
@@ -29,6 +29,8 @@ export default function CalendarPage() {
   const [reminders, setReminders] = useState([])
   const [edit, setEdit] = useState(null)      // event being edited
   const [adding, setAdding] = useState(null)  // date to add something on
+  const [openDay, setOpenDay] = useState(null) // day shown in the day sheet
+  const clickRef = useRef({ iso: null, t: 0, timer: null })
   const [drag, setDrag] = useState(null)
   const { can } = useAuth()
   const canDates = can('houses')
@@ -52,6 +54,18 @@ export default function CalendarPage() {
     if (error) return toast(friendlyError(error), 'error'), false
     loadJobs(); return true
   }
+  const clickDay = (iso) => {
+    setDay(iso)
+    const c = clickRef.current
+    const now = Date.now()
+    if (c.iso === iso && now - c.t < 320) {        // second click: add a note
+      clearTimeout(c.timer); clickRef.current = { iso: null, t: 0, timer: null }
+      setOpenDay(null); setAdding(iso); return
+    }
+    clearTimeout(c.timer)
+    clickRef.current = { iso, t: now, timer: setTimeout(() => setOpenDay(iso), 260) }
+  }
+
   const dropOn = async (iso) => {
     const e = drag; setDrag(null)
     if (!e || e.date === iso) return
@@ -148,7 +162,7 @@ export default function CalendarPage() {
           const iso = toISO(d)
           const evs = byDate[iso] || []
           return (
-            <button key={iso} onClick={() => setDay(iso)} {...dnd(iso)}
+            <button key={iso} onClick={() => clickDay(iso)} {...dnd(iso)} title="Click to open, double-click to add a note"
               className={`cal-cell ${d.getMonth() !== month.getMonth() ? 'other' : ''} ${iso === today() ? 'is-today' : ''} ${iso === day ? 'sel' : ''} ${weekSet.has(iso) ? 'in-week' : ''}`}>
               <span className="cal-num">{d.getDate()}</span>
               <span className="cal-evs">
@@ -175,7 +189,7 @@ export default function CalendarPage() {
             const evs = byDate[iso] || []
             const d = parseDate(iso)
             return (
-              <div key={iso} className={`week-day ${iso === today() ? 'is-today' : ''} ${iso === day ? 'sel' : ''}`} onClick={() => setDay(iso)} {...dnd(iso)}>
+              <div key={iso} className={`week-day ${iso === today() ? 'is-today' : ''} ${iso === day ? 'sel' : ''}`} onClick={() => clickDay(iso)} {...dnd(iso)}>
                 <div className="wd-head">
                   <span>{d.toLocaleDateString('en-AU', { weekday: 'short' })}</span>
                   <b>{d.getDate()}</b>
@@ -208,13 +222,56 @@ export default function CalendarPage() {
           </div>
         )}
       </section>
-      <p className="small muted">Tap anything to change it, or use + on a day to add. On a computer you can also drag things to another day.</p>
+      <p className="small muted">Click a day to open it, double-click to add a note. Tap anything to change it. On a computer you can also drag things to another day.</p>
 
+      {openDay && <DaySheet iso={openDay} events={byDate[openDay] || []} onHire={onHire(openDay)}
+        onClose={() => setOpenDay(null)} onEdit={(e) => { setOpenDay(null); setEdit(e) }}
+        onAdd={() => { setAdding(openDay); setOpenDay(null) }} onTick={tick} />}
       {edit && <EventEditor e={edit} canDates={canDates} onClose={() => setEdit(null)}
         onSaved={() => { setEdit(null); loadJobs(); loadReminders() }} />}
       {adding && <AddOnDay date={adding} jobs={jobs} canDates={canDates} onClose={() => setAdding(null)}
         onSaved={() => { setAdding(null); loadJobs(); loadReminders() }} />}
     </div>
+  )
+}
+
+/** Everything on one day: tap an item to edit it, or add a note. */
+function DaySheet({ iso, events, onHire, onClose, onEdit, onAdd, onTick }) {
+  const d = parseDate(iso)
+  return (
+    <Modal title={d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' })} onClose={onClose}>
+      <div className="stack">
+        {events.length === 0
+          ? <p className="muted" style={{ margin: 0 }}>Nothing on this day yet.</p>
+          : (
+            <ul className="list day-list">
+              {events.map((e, i) => (
+                <li key={i}>
+                  <div role="button" tabIndex={0} className="list-row day-row" onClick={() => onEdit(e)} onKeyDown={(ev) => { if (ev.key === 'Enter') onEdit(e) }}>
+                    {e.reminder
+                      ? <input type="checkbox" aria-label="Done" checked={Boolean(e.reminder.done_at)} onClick={(ev) => ev.stopPropagation()} onChange={() => onTick(e.reminder)} />
+                      : <i className={`dot ${e.cls}`} />}
+                    <div className="grow">
+                      <div className={`row-title ${e.reminder?.done_at ? 'is-done' : ''}`}>{e.label}</div>
+                      {e.job && <div className="row-sub">{e.job.property_address}{e.job.clients?.name ? ` · ${e.job.clients.name}` : ''}</div>}
+                    </div>
+                    <span className="small muted">Edit</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        {onHire.length > 0 && (
+          <p className="small muted" style={{ margin: 0 }}>
+            Furniture out at: {onHire.map((j) => j.property_address).join(', ')}
+          </p>
+        )}
+        <div className="row sticky-actions">
+          <button type="button" className="btn btn-ghost" onClick={onClose}>Close</button>
+          <button type="button" className="btn btn-primary grow" onClick={onAdd}><Icon name="plus" size={18} /> Add note or date</button>
+        </div>
+      </div>
+    </Modal>
   )
 }
 

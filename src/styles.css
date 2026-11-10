@@ -825,3 +825,10 @@ input[type=checkbox] { box-shadow: none; }
   .wd-head b { margin-left: 0; }
   .wd-add { margin-left: auto; }
 }
+
+/* day sheet */
+.day-list { margin: 0; }
+.day-row { cursor: pointer; }
+.day-row input[type=checkbox] { width: 20px; height: 20px; min-height: 0; flex: none; margin: 0; }
+.day-row .row-title.is-done { text-decoration: line-through; opacity: .55; }
+.cal-cell { user-select: none; -webkit-user-select: none; }
