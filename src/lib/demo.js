@@ -192,7 +192,7 @@ function embed(table, row, name, sub) {
       return sub.trim() === 'count' ? [{ count: ls.length }] : ls.map(clone)
     }
   }
-  if (table === 'reminders' && name === 'jobs') return clone(db.jobs.find((j) => j.id === row.job_id))
+  if (table === 'reminders' && name === 'jobs') { const j = db.jobs.find((x) => x.id === row.job_id); return j ? clone(j) : null }
   if (table === 'item_events' && name === 'profiles') return clone(db.profiles.find((p) => p.id === row.created_by))
   if (table === 'job_items') {
     if (name === 'items') return clone(db.items.find((i) => i.id === row.item_id))

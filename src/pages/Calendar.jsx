@@ -34,7 +34,7 @@ export default function CalendarPage() {
   const canDates = can('houses')
 
   const loadReminders = () => supabase.from('reminders').select('*, jobs(id, property_address, type, status)').order('due_date')
-    .then(({ data }) => setReminders((data || []).filter((r) => r.jobs && r.jobs.status !== 'cancelled')))
+    .then(({ data }) => setReminders((data || []).filter((r) => !r.job_id || (r.jobs && r.jobs.status !== 'cancelled'))))
   const loadJobs = () => supabase.from('jobs').select('*, clients(name)').neq('status', 'cancelled').then(({ data }) => setJobs(data || []))
   useEffect(() => { loadJobs(); loadReminders() }, [])
 
@@ -76,7 +76,7 @@ export default function CalendarPage() {
 
   const events = useMemo(() => [
     ...jobEvents(jobs || []),
-    ...reminders.map((r) => ({ date: r.due_date, kind: 'reminder', job: r.jobs, reminder: r, label: r.title, cls: `ev-remind${r.done_at ? ' is-done' : ''}` })),
+    ...reminders.map((r) => ({ date: r.due_date, kind: 'reminder', job: r.jobs || null, reminder: r, label: r.title, cls: `ev-remind${r.done_at ? ' is-done' : ''}` })),
   ].sort((a, b) => a.date.localeCompare(b.date)), [jobs, reminders])
   const overdue = reminders.filter((r) => !r.done_at && r.due_date < today())
   const byDate = useMemo(() => events.reduce((a, e) => ((a[e.date] ||= []).push(e), a), {}), [events])
@@ -124,7 +124,7 @@ export default function CalendarPage() {
 
       <div className="legend">
         {['ev-visit', 'ev-pack', 'ev-install', 'ev-end', 'ev-collect', 'ev-remind'].map((c, i) => (
-          <span key={c}><i className={`dot ${c}`} />{['Visit / consult', 'Pack / unpack', 'Install', 'Hire ends', 'Collection', 'Reminder'][i]}</span>
+          <span key={c}><i className={`dot ${c}`} />{['Visit / consult', 'Pack / unpack', 'Install', 'Hire ends', 'Collection', 'Note / reminder'][i]}</span>
         ))}
       </div>
 
@@ -135,7 +135,7 @@ export default function CalendarPage() {
             {overdue.map((r) => (
               <li key={r.id} className="list-row">
                 <input type="checkbox" checked={false} onChange={() => tick(r)} aria-label="Done" />
-                <Link to={`/jobs/${r.job_id}`} className="grow">{r.title} · {r.jobs.property_address} · {parseDate(r.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</Link>
+                <Link to={r.job_id ? `/jobs/${r.job_id}` : '/calendar'} className="grow">{r.title}{r.jobs ? ` · ${r.jobs.property_address}` : ''} · {parseDate(r.due_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}</Link>
               </li>
             ))}
           </ul>
@@ -153,7 +153,7 @@ export default function CalendarPage() {
               <span className="cal-num">{d.getDate()}</span>
               <span className="cal-evs">
                 {evs.slice(0, 3).map((e, i) => (
-                  <span key={i} className={`cal-ev ${e.cls}`}><span className="cal-ev-txt">{e.label} · {e.job.property_address}</span></span>
+                  <span key={i} className={`cal-ev ${e.cls}`}><span className="cal-ev-txt">{e.label}{e.job ? ` · ${e.job.property_address}` : ''}</span></span>
                 ))}
                 {evs.length > 3 && <span className="cal-more">+{evs.length - 3}</span>}
               </span>
@@ -190,7 +190,7 @@ export default function CalendarPage() {
                       {e.reminder && <input type="checkbox" checked={Boolean(e.reminder.done_at)} aria-label="Done"
                         onClick={(ev) => ev.stopPropagation()} onChange={() => tick(e.reminder)} />} {e.label}
                     </span>
-                    <span className="wd-ev-addr">{e.job.property_address}</span>
+                    {e.job && <span className="wd-ev-addr">{e.job.property_address}</span>}
                   </div>
                 ))}
               </div>
@@ -226,7 +226,7 @@ function EventEditor({ e, canDates, onClose, onSaved }) {
   const [date, setDate] = useState(e.date)
   const [title, setTitle] = useState(r?.title || '')
   const [busy, setBusy] = useState(false)
-  const autoEnd = e.field === 'install_date' && e.job.type === 'staging' && !e.job.hire_end_date
+  const autoEnd = e.field === 'install_date' && e.job?.type === 'staging' && !e.job.hire_end_date
 
   const run = async (fn, msg) => {
     setBusy(true)
@@ -237,13 +237,13 @@ function EventEditor({ e, canDates, onClose, onSaved }) {
   }
   const save = (ev) => {
     ev.preventDefault()
-    if (r) return run(() => supabase.from('reminders').update({ title: title.trim() || r.title, due_date: date }).eq('id', r.id), 'Reminder updated')
+    if (r) return run(() => supabase.from('reminders').update({ title: title.trim() || r.title, due_date: date }).eq('id', r.id), 'Note updated')
     return run(() => supabase.from('jobs').update({ [e.field]: date || null }).eq('id', e.job.id), `${e.label} moved to ${longDate(date)}`)
   }
   const remove = () => {
     if (r) {
-      if (!confirm('Delete this reminder?')) return
-      return run(() => supabase.from('reminders').delete().eq('id', r.id), 'Reminder deleted')
+      if (!confirm('Delete this note?')) return
+      return run(() => supabase.from('reminders').delete().eq('id', r.id), 'Note deleted')
     }
     if (!confirm(`Remove the ${e.label.toLowerCase()} date from ${e.job.property_address}?`)) return
     return run(() => supabase.from('jobs').update({ [e.field]: null }).eq('id', e.job.id), `${e.label} date removed`)
@@ -251,10 +251,10 @@ function EventEditor({ e, canDates, onClose, onSaved }) {
   const editable = r || canDates
 
   return (
-    <Modal title={r ? 'Reminder' : e.label} onClose={onClose}>
+    <Modal title={r ? 'Note' : e.label} onClose={onClose}>
       <form className="stack" onSubmit={save}>
-        <p className="small muted" style={{ margin: 0 }}>{e.job.property_address}</p>
-        {r && <Field label="What"><input value={title} onChange={(ev) => setTitle(ev.target.value)} /></Field>}
+        <p className="small muted" style={{ margin: 0 }}>{e.job ? e.job.property_address : 'Not linked to a house'}</p>
+        {r && <Field label="Note"><textarea rows={3} value={title} onChange={(ev) => setTitle(ev.target.value)} /></Field>}
         <Field label={r ? 'Remind on' : 'Date'}>
           <input type="date" required value={date || ''} onChange={(ev) => setDate(ev.target.value)} disabled={!editable} />
         </Field>
@@ -263,7 +263,7 @@ function EventEditor({ e, canDates, onClose, onSaved }) {
         {!editable && <p className="small muted">You can view this, but changing house dates needs Houses access.</p>}
         <div className="row sticky-actions">
           {editable && e.field !== 'hire_end_date' && <button type="button" className="btn btn-ghost danger" onClick={remove} disabled={busy}>{r ? 'Delete' : 'Remove date'}</button>}
-          {canDates && <Link className="btn" to={`/jobs/${e.job.id}`}>Open house</Link>}
+          {canDates && e.job && <Link className="btn" to={`/jobs/${e.job.id}`}>Open house</Link>}
           {editable && <button className="btn btn-primary grow" disabled={busy || !date}>{busy ? 'Saving…' : 'Save'}</button>}
         </div>
       </form>
@@ -272,7 +272,7 @@ function EventEditor({ e, canDates, onClose, onSaved }) {
 }
 
 const ADD_KINDS = [
-  ['reminder', 'Reminder'],
+  ['reminder', 'Note / reminder'],
   ['site_visit_date', 'Site visit'],
   ['consult_date', 'Consult'],
   ['pack_date', 'Packing'],
@@ -296,14 +296,14 @@ function AddOnDay({ date: d0, jobs, canDates, onClose, onSaved }) {
 
   const save = async (ev) => {
     ev.preventDefault()
-    if (!jobId) return toast('Pick a house', 'error')
+    if (!jobId && kind !== 'reminder') return toast('Pick a house', 'error')
     setBusy(true)
     const { error } = kind === 'reminder'
-      ? await supabase.from('reminders').insert({ job_id: jobId, title: title.trim(), due_date: date })
+      ? await supabase.from('reminders').insert({ job_id: jobId || null, title: title.trim(), due_date: date })
       : await supabase.from('jobs').update({ [kind]: date }).eq('id', jobId)
     setBusy(false)
     if (error) return toast(friendlyError(error), 'error')
-    toast(`${kind === 'reminder' ? 'Reminder' : ADD_KINDS.find(([k]) => k === kind)[1]} set for ${longDate(date)}`)
+    toast(`${kind === 'reminder' ? 'Note' : ADD_KINDS.find(([k]) => k === kind)[1]} set for ${longDate(date)}`)
     onSaved()
   }
 
@@ -313,13 +313,13 @@ function AddOnDay({ date: d0, jobs, canDates, onClose, onSaved }) {
         <div className="chips">
           {kinds.map(([k, l]) => <button type="button" key={k} className={`chip ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>{l}</button>)}
         </div>
-        <Field label="House">
-          <select required value={jobId} onChange={(ev) => setJobId(ev.target.value)}>
-            <option value="">Choose a house…</option>
+        {kind === 'reminder' && <Field label="Note"><textarea required rows={3} value={title} onChange={(ev) => setTitle(ev.target.value)} placeholder="e.g. Order new cushions, or call agent to confirm access" /></Field>}
+        <Field label={kind === 'reminder' ? 'House (optional)' : 'House'}>
+          <select required={kind !== 'reminder'} value={jobId} onChange={(ev) => setJobId(ev.target.value)}>
+            <option value="">{kind === 'reminder' ? 'No house' : 'Choose a house…'}</option>
             {houses.map((j) => <option key={j.id} value={j.id}>{j.property_address}</option>)}
           </select>
         </Field>
-        {kind === 'reminder' && <Field label="What"><input required value={title} onChange={(ev) => setTitle(ev.target.value)} placeholder="e.g. Call agent to confirm access" /></Field>}
         <Field label="Date"><input type="date" required value={date} onChange={(ev) => setDate(ev.target.value)} /></Field>
         {replacing && <p className="small muted" style={{ margin: 0 }}>This replaces its current date ({longDate(job[kind])}).</p>}
         <div className="row sticky-actions">

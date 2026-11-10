@@ -42,7 +42,7 @@ export default function Dashboard2() {
     fetchAll(() => supabase.from('v_items').select('id, status, out_job_id, condition').order('code')),
     fetchAll(() => supabase.from('job_items').select('id, job_id, packed_at, returned_at, missing_at').order('id')),
     supabase.from('reminders').select('*, jobs(id, property_address, status)').is('done_at', null).order('due_date').then((r) => r.data || []),
-  ]).then(([jobs, items, lines, reminders]) => setD({ jobs, items, lines, reminders: reminders.filter((r) => r.jobs && r.jobs.status !== 'cancelled') }))
+  ]).then(([jobs, items, lines, reminders]) => setD({ jobs, items, lines, reminders: reminders.filter((r) => !r.job_id || (r.jobs && r.jobs.status !== 'cancelled')) }))
     .catch((e) => { toast(friendlyError(e), 'error'); setD({ jobs: [], items: [], lines: [], reminders: [] }) })
   useEffect(() => { load() }, [])
 
@@ -204,12 +204,12 @@ export default function Dashboard2() {
         {can('calendar') && (
           <Tile icon="bell" tone="t-gold" title="Reminders" to="/calendar" action="Open Calendar"
             badge={s.overdue ? `${s.overdue} overdue` : s.remCount ? `${s.remCount} open` : null} badgeTone={s.overdue ? 'urgent' : 'info'}>
-            {s.reminders.length === 0 ? <p className="tc-empty">No reminders. Add them on a house.</p> : s.reminders.map((r) => (
+            {s.reminders.length === 0 ? <p className="tc-empty">No notes or reminders. Add them from the calendar or a house.</p> : s.reminders.map((r) => (
               <div key={r.id} className={`tc-row ${r.due_date < s.t ? 'late' : ''}`}>
                 <input type="checkbox" aria-label="Done" onChange={() => tick(r)} />
-                <Link to={`/jobs/${r.job_id}`} className="grow">
+                <Link to={r.job_id ? `/jobs/${r.job_id}` : "/calendar"} className="grow">
                   <div className="tc-title">{r.title}</div>
-                  <div className="tc-sub">{r.due_date < s.t ? 'Overdue · ' : ''}{short(r.due_date)} · {r.jobs.property_address}</div>
+                  <div className="tc-sub">{r.due_date < s.t ? 'Overdue · ' : ''}{short(r.due_date)}{r.jobs ? ` · ${r.jobs.property_address}` : ''}</div>
                 </Link>
               </div>
             ))}
