@@ -10,7 +10,23 @@ export function deviceName(ua = navigator.userAgent) {
   const app = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone ? ' (home screen app)' : ''
   return `${os} · ${br}${app}`
 }
-const logActivity = (kind) => supabase.rpc('log_activity', { p_kind: kind, p_device: deviceName() }).then(() => {}, () => {})
+const logActivity = (kind, page) => supabase.rpc('log_activity', { p_kind: kind, p_device: deviceName(), ...(page ? { p_page: page } : {}) }).then(() => {}, () => {})
+
+/** Friendly name for the part of the app at this address (null = don't log). */
+export function pageName(path, field) {
+  const P = field ? 'Field: ' : ''
+  if (path === '/') return field ? 'Field: Home' : 'Dashboard'
+  if (path === '/logins') return null
+  const rules = [
+    [/^\/inventory\/new/, 'Add item'], [/^\/(inventory|i)\//, 'Stock item'], [/^\/inventory/, 'Stock'],
+    [/^\/jobs\/new/, 'New house'], [/^\/jobs\//, 'House details'], [/^\/(jobs|houses)/, 'Houses'],
+    [/^\/calendar/, 'Calendar'], [/^\/import/, 'Import'], [/^\/labels/, 'Labels'], [/^\/shop/, 'Shop'],
+    [/^\/business/, 'Business details'], [/^\/team/, 'Team'], [/^\/pick\//, 'Pick list'], [/^\/scan/, 'Scan'],
+  ]
+  const hit = rules.find(([re]) => re.test(path))
+  return hit ? P + hit[1] : null
+}
+export const logPage = (page) => page && logActivity('view', page)
 
 const AuthCtx = createContext(null)
 

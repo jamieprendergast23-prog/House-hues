@@ -341,6 +341,7 @@ const RPC = {
       const [p, device] = ppl[(h / 5) % 3]
       if ((h / 5) % 4 === 3) continue
       out.push({ user_id: p.id, full_name: p.full_name, role: p.role, at: new Date(Date.now() - h * 3600_000 - 600_000).toISOString(), kind: h % 3 === 0 ? 'sign_in' : 'open', device })
+      ;['Dashboard', 'Calendar', 'Houses', 'House details', 'Stock'].slice(0, 1 + (h % 4)).forEach((page, n) => out.push({ user_id: p.id, full_name: p.full_name, role: p.role, at: new Date(Date.now() - h * 3600_000 - 500_000 + n * 60_000).toISOString(), kind: 'view', device, page }))
     }
     return out
   },

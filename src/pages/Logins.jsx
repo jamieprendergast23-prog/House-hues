@@ -20,7 +20,7 @@ export default function Logins() {
   const [kind, setKind] = useState('')
 
   useEffect(() => {
-    supabase.rpc('login_tracker', { p_limit: 1000 }).then(({ data }) => setRows(data || []))
+    supabase.rpc('login_tracker', { p_limit: 3000 }).then(({ data }) => setRows(data || []))
   }, [])
 
   const people = useMemo(() => {
@@ -30,12 +30,13 @@ export default function Logins() {
     const start = new Date(); start.setDate(start.getDate() - 6)
     const weekStart = start.toLocaleDateString('en-CA')
     for (const r of rows || []) {
-      const p = map.get(r.user_id) || { id: r.user_id, name: r.full_name || 'Unnamed', role: r.role, last: r, signIns30: 0, days7: new Set(), devices: new Set() }
+      const p = map.get(r.user_id) || { id: r.user_id, name: r.full_name || 'Unnamed', role: r.role, last: r, signIns30: 0, days7: new Set(), devices: new Set(), pages: {} }
       const t = new Date(r.at).getTime()
       if (r.kind === 'sign_in' && t > month) p.signIns30++
       const day = localDay(r.at)
       if (day >= weekStart) p.days7.add(day)
       if (r.device) p.devices.add(r.device)
+      if (r.kind === 'view' && r.page && t > month) p.pages[r.page] = (p.pages[r.page] || 0) + 1
       map.set(r.user_id, p)
     }
     return [...map.values()].sort((a, b) => b.last.at.localeCompare(a.last.at))
@@ -47,7 +48,7 @@ export default function Logins() {
   return (
     <div className="stack">
       <div className="page-head"><h1>Logins</h1></div>
-      <p className="small muted">Only you can see this page. Sign-ins are recorded each time someone logs in, and app opens at most once every 30 minutes. Before 12 Nov, only sign-ins and each login’s last activity were available, so earlier days show less detail.</p>
+      <p className="small muted">Only you can see this page. Records sign-ins, app opens (at most every 30 minutes) and which parts of the app are used (each page once per 10 minutes). Chips show each person’s most-used areas over 30 days. Before 12 Nov, only sign-ins and each login’s last activity were available, so earlier days show less detail.</p>
 
       <div className="login-people">
         {people.length === 0 && <p className="small muted">No activity recorded yet.</p>}
@@ -59,6 +60,13 @@ export default function Logins() {
               <span><b>{p.days7.size}</b> of last 7 days</span>
               <span><b>{p.signIns30}</b> sign-ins in 30 days</span>
             </div>
+            {Object.keys(p.pages).length > 0 && (
+              <div className="login-pages">
+                {Object.entries(p.pages).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([pg, n]) => (
+                  <span key={pg} className="login-chip">{pg} <b>{n}</b></span>
+                ))}
+              </div>
+            )}
           </button>
         ))}
       </div>
@@ -70,15 +78,16 @@ export default function Logins() {
             <button type="button" className={!kind ? 'on' : ''} onClick={() => setKind('')}>All</button>
             <button type="button" className={kind === 'sign_in' ? 'on' : ''} onClick={() => setKind('sign_in')}>Sign-ins</button>
             <button type="button" className={kind === 'open' ? 'on' : ''} onClick={() => setKind('open')}>Opens</button>
+            <button type="button" className={kind === 'view' ? 'on' : ''} onClick={() => setKind('view')}>Pages</button>
           </div>
         </div>
         {shown.length === 0 ? <p className="small muted">Nothing to show.</p> : (
           <ul className="list login-list">
             {shown.slice(0, 300).map((r, i) => (
               <li key={i} className="list-row">
-                <i className={`dot ${r.kind === 'sign_in' ? 'c-booked' : 'c-quote'}`} />
+                <i className={`dot ${r.kind === 'sign_in' ? 'c-booked' : r.kind === 'view' ? 'c-out' : 'c-quote'}`} />
                 <div className="grow">
-                  <div className="row-title">{r.full_name || 'Unnamed'} <span className="muted small">{r.kind === 'sign_in' ? 'signed in' : 'opened the app'}</span></div>
+                  <div className="row-title">{r.full_name || 'Unnamed'} <span className="muted small">{r.kind === 'sign_in' ? 'signed in' : r.kind === 'view' ? `used ${r.page}` : 'opened the app'}</span></div>
                   <div className="row-sub">{stamp(r.at)}{r.device ? ` · ${r.device}` : ''}</div>
                 </div>
               </li>

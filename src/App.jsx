@@ -1,6 +1,7 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { configured, isDemo, supabase } from './lib/supabase'
-import { AuthProvider, useAuth } from './lib/auth'
+import { AuthProvider, useAuth, pageName, logPage } from './lib/auth'
 import { Toaster } from './lib/toast'
 import { ERP, PLANNER } from './lib/features'
 import Houses from './pages/Houses'
@@ -51,6 +52,8 @@ export default function App() {
 function Protected() {
   const { session, loading, fieldMode, hasMain, can, isAdmin, home, canLogins } = useAuth()
   const loc = useLocation()
+  // usage log: which part of the app was opened
+  useEffect(() => { if (session && !loading) logPage(pageName(loc.pathname, fieldMode)) }, [loc.pathname, fieldMode, session?.user?.id, loading])
   if (loading) return <Loading />
   if (!session) return <Navigate to="/login" state={{ from: loc.pathname }} replace />
   if (!hasMain && !can('field')) return <NoAccess />

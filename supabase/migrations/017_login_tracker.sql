@@ -39,3 +39,10 @@ $$;
 
 revoke execute on function public.can_view_logins(), public.log_activity(text, text), public.login_tracker(int) from public, anon;
 grant execute on function public.can_view_logins(), public.log_activity(text, text), public.login_tracker(int) to authenticated;
+
+-- Pages visited (so it shows which parts of the app get used)
+alter table public.login_events add column page text;
+alter table public.login_events drop constraint login_events_kind_check;
+alter table public.login_events add constraint login_events_kind_check check (kind in ('sign_in', 'open', 'view'));
+-- log_activity(kind, device, page): views of the same page count once per 10 minutes
+-- login_tracker(): now also returns page (see live definitions)
