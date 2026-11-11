@@ -910,3 +910,12 @@ input[type=checkbox] { box-shadow: none; }
   .shop-row .shop-btn { padding: 8px 10px; font-size: .84rem; }
   .shop-hero { padding: 12px 0 14px; }
 }
+
+/* login tracker */
+.login-people { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.login-person { text-align: left; font: inherit; color: inherit; cursor: pointer; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.login-person.on { outline: 2px solid var(--ink); outline-offset: -2px; }
+.login-stats { display: flex; gap: 14px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); margin-top: 4px; }
+.login-stats b { color: var(--ink); }
+.login-list .list-row { gap: 10px; }
+.login-link { text-decoration: none; color: inherit; align-items: center; }

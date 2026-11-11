@@ -5,6 +5,17 @@ import { toast } from '../lib/toast'
 import { PERMS } from '../lib/constants'
 import { Field, Loading } from '../components/ui'
 import MailConnect from '../components/MailConnect'
+import { Link } from 'react-router-dom'
+
+function MailConnectAndLogins() {
+  const { canLogins } = useAuth()
+  return (
+    <>
+      {canLogins && <Link to="/logins" className="card row between login-link"><span><b>Login tracker</b><br /><span className="small muted">Only you can see this</span></span><span className="muted">Open</span></Link>}
+      <MailConnect />
+    </>
+  )
+}
 import Icon from '../components/Icon'
 
 /** Tick boxes for the areas a person can use. */
@@ -96,7 +107,7 @@ export default function Team() {
         })}
       </ul>
 
-      <MailConnect />
+      <MailConnectAndLogins />
 
       <form className="card stack" onSubmit={invite}>
         <h2>Invite someone</h2>

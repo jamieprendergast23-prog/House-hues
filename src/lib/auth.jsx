@@ -2,12 +2,23 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { MAIN_AREAS } from './constants'
 
+/** Short device description, e.g. "iPhone · Safari". */
+export function deviceName(ua = navigator.userAgent) {
+  const os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet')
+    : /Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows' : /CrOS/.test(ua) ? 'Chromebook' : /Linux/.test(ua) ? 'Linux' : 'Other'
+  const br = /Edg\//.test(ua) ? 'Edge' : /CriOS|Chrome\//.test(ua) ? 'Chrome' : /FxiOS|Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser'
+  const app = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone ? ' (home screen app)' : ''
+  return `${os} · ${br}${app}`
+}
+const logActivity = (kind) => supabase.rpc('log_activity', { p_kind: kind, p_device: deviceName() }).then(() => {}, () => {})
+
 const AuthCtx = createContext(null)
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [canLogins, setCanLogins] = useState(false)
   const [fieldPref, setFieldPref] = useState(() => localStorage.getItem('hh-field') === '1')
 
   useEffect(() => {
@@ -23,7 +34,17 @@ export function AuthProvider({ children }) {
     if (!session) { setProfile(null); return }
     supabase.from('profiles').select('*').eq('id', session.user.id).single()
       .then(({ data }) => { setProfile(data); setLoading(false) })
-  }, [session])
+    // a real sign-in changes last_sign_in_at; otherwise this is the app being opened
+    const key = `hh-signin-${session.user.id}`
+    let seen = null
+    try { seen = localStorage.getItem(key) } catch { /* ignore */ }
+    const last = session.user.last_sign_in_at
+    if (last && last !== seen) {
+      try { localStorage.setItem(key, last) } catch { /* ignore */ }
+      logActivity('sign_in')
+    } else logActivity('open')
+    supabase.rpc('can_view_logins').then(({ data }) => setCanLogins(data === true), () => setCanLogins(false))
+  }, [session?.user?.id])
 
   const isAdmin = profile?.role === 'admin'
   const perms = profile?.permissions || ['field']
@@ -40,7 +61,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthCtx.Provider value={{ session, profile, loading, isAdmin, can, hasMain, home, fieldMode, setFieldMode }}>
+    <AuthCtx.Provider value={{ session, profile, loading, isAdmin, can, hasMain, home, fieldMode, setFieldMode, canLogins }}>
       {children}
     </AuthCtx.Provider>
   )

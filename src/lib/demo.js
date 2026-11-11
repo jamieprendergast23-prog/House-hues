@@ -332,6 +332,18 @@ class Query {
 // ---------- RPCs ----------
 const byCode = (code) => db.items.find((i) => i.code === String(code).trim().toUpperCase())
 const RPC = {
+  log_activity: () => null,
+  can_view_logins: () => false,
+  login_tracker: () => {
+    const ppl = [[ADMIN, 'iPhone · Safari (home screen app)'], [CREW, 'Android phone · Chrome'], [STYLIST, 'Windows · Edge']]
+    const out = []
+    for (let h = 0; h < 24 * 9; h += 5) {
+      const [p, device] = ppl[(h / 5) % 3]
+      if ((h / 5) % 4 === 3) continue
+      out.push({ user_id: p.id, full_name: p.full_name, role: p.role, at: new Date(Date.now() - h * 3600_000 - 600_000).toISOString(), kind: h % 3 === 0 ? 'sign_in' : 'open', device })
+    }
+    return out
+  },
   sale_items: () => db.items.filter((i) => i.for_sale && !i.sold_at && i.status === 'retired' && Number(i.sale_price) > 0)
     .map((i) => ({ id: i.id, name: i.name, category: i.category, colour: i.colour, dimensions: i.dimensions, description: i.description, photo_url: i.photo_url, sale_price: i.sale_price, sale_note: i.sale_note, listed_at: i.updated_at })),
   available_items({ p_job_id }) {

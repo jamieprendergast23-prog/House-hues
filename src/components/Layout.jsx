@@ -22,7 +22,7 @@ const ALL_NAV = ERP ? [
 ]
 
 export default function Layout({ children }) {
-  const { setFieldMode, can, isAdmin } = useAuth()
+  const { setFieldMode, can, isAdmin, canLogins } = useAuth()
   const NAV = ALL_NAV.filter(([, , , p]) => (p === 'admin' ? isAdmin : can(p)))
   const nav = useNavigate()
   const [newCount, setNewCount] = useState(0)
@@ -45,6 +45,7 @@ export default function Layout({ children }) {
           ))}
           {can('stock') && !ERP && <NavLink to="/shop">Shop</NavLink>}
           {isAdmin && <NavLink to="/team">Team</NavLink>}
+          {canLogins && <NavLink to="/logins">Logins</NavLink>}
         </nav>
         <div className="topbar-actions">
           {can('field') && <button className="btn btn-small" onClick={() => { nav('/'); setTimeout(() => setFieldMode(true), 50) }}>Field mode</button>}

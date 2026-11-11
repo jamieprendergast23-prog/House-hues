@@ -28,6 +28,7 @@ import PickList from './field/PickList'
 import FieldScan from './field/FieldScan'
 import Shop from './shop/Shop'
 import ShopOrders from './pages/ShopOrders'
+import Logins from './pages/Logins'
 import FieldItem from './field/FieldItem'
 
 export default function App() {
@@ -48,7 +49,7 @@ export default function App() {
 }
 
 function Protected() {
-  const { session, loading, fieldMode, hasMain, can, isAdmin, home } = useAuth()
+  const { session, loading, fieldMode, hasMain, can, isAdmin, home, canLogins } = useAuth()
   const loc = useLocation()
   if (loading) return <Loading />
   if (!session) return <Navigate to="/login" state={{ from: loc.pathname }} replace />
@@ -86,6 +87,7 @@ function Protected() {
         <Route path="/houses" element={need('houses', <Houses />)} />
         <Route path="/business" element={need('money', <Business />)} />
         <Route path="/shop" element={need('stock', <ShopOrders />)} />
+        <Route path="/logins" element={canLogins ? <Logins /> : <Navigate to={home} replace />} />
         <Route path="/dashboard" element={<Navigate to="/" replace />} />
         {ERP && <Route path="/requests" element={need('admin', <Requests />)} />}
         <Route path="/team" element={need('admin', <Team />)} />
