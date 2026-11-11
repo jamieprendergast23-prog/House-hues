@@ -47,7 +47,7 @@ export default function Logins() {
   return (
     <div className="stack">
       <div className="page-head"><h1>Logins</h1></div>
-      <p className="small muted">Only you can see this page. Sign-ins are recorded each time someone logs in, and app opens at most once every 30 minutes.</p>
+      <p className="small muted">Only you can see this page. Sign-ins are recorded each time someone logs in, and app opens at most once every 30 minutes. Before 12 Nov, only sign-ins and each login’s last activity were available, so earlier days show less detail.</p>
 
       <div className="login-people">
         {people.length === 0 && <p className="small muted">No activity recorded yet.</p>}
