@@ -32,6 +32,7 @@ export default function PickList() {
   const [finishing, setFinishing] = useState(false)
   const [missingNote, setMissingNote] = useState('')
   const [busy, setBusy] = useState(false)
+  const [openSet, setOpenSet] = useState({})
 
   const load = useCallback(async () => {
     const [j, l, ph] = await Promise.all([
@@ -70,6 +71,18 @@ export default function PickList() {
   const groupKeys = Object.keys(groups).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   const designs = (room) => photos.filter((p) => p.room === room && p.kind === 'design')
   const sitePhotos = (room) => photos.filter((p) => p.room === room && p.kind === 'site')
+
+  // identical pieces (same name, sku, room, photo) collapse into one card with a count
+  const bundle = (list) => {
+    const m = new Map()
+    for (const l of [...list].sort((a, b) => doneOf(a) - doneOf(b))) {
+      const key = [l.items.name, l.items.sku, l.items.colour, l.items.photo_url, l.room].join('|')
+      if (!m.has(key)) m.set(key, [])
+      m.get(key).push(l)
+    }
+    return [...m.values()].map((b) => b.sort((a, c) => String(a.items.code).localeCompare(String(c.items.code))))
+      .sort((a, b) => (a.every(doneOf) ? 1 : 0) - (b.every(doneOf) ? 1 : 0))
+  }
 
   const toggle = async (l) => {
     navigator.vibrate?.(30)
@@ -193,19 +206,58 @@ export default function PickList() {
             </button>
           )}
           <div className="pick-cards">
-          {groups[k].sort((a, b) => doneOf(a) - doneOf(b)).map((l) => (
-            <button key={l.id} className={`pick pick-card ${doneOf(l) ? 'done' : ''} ${l.missing_at && !doneOf(l) ? 'missing' : ''}`} onClick={() => toggle(l)}>
-              <span className="pick-photo">
-                {l.items.photo_url ? <img src={l.items.photo_url} alt="" loading="lazy" /> : <span className="pick-noimg"><Icon name="image" size={34} /></span>}
-                <span className="pick-check">{doneOf(l) && <Icon name="check" size={20} stroke={2.6} />}</span>
-              </span>
-              <span className="pick-text">
-                <strong>{l.items.name}</strong>
-                <span>{l.items.sku ? `${l.items.sku} · ` : ''}{l.items.code}{l.items.colour ? ` · ${l.items.colour}` : ''}</span>
-                <span>{l.missing_at && !l.returned_at ? <b className="warn-text">Marked missing</b> : sort === 'room' ? `Shed: ${l.items.shed_location || '—'}` : sort === 'install' ? `${l.room} · Shed: ${l.items.shed_location || '—'}` : `Room: ${l.room}`}</span>
-              </span>
-            </button>
-          ))}
+          {bundle(groups[k]).map((b) => {
+            const l = b[0]
+            const where = l.missing_at && !l.returned_at && b.length === 1 ? <b className="warn-text">Marked missing</b> : sort === 'room' ? `Shed: ${l.items.shed_location || '—'}` : sort === 'install' ? `${l.room} · Shed: ${l.items.shed_location || '—'}` : `Room: ${l.room}`
+            const photo = l.items.photo_url ? <img src={l.items.photo_url} alt="" loading="lazy" /> : <span className="pick-noimg"><Icon name="image" size={34} /></span>
+            if (b.length === 1) return (
+              <button key={l.id} className={`pick pick-card ${doneOf(l) ? 'done' : ''} ${l.missing_at && !doneOf(l) ? 'missing' : ''}`} onClick={() => toggle(l)}>
+                <span className="pick-photo">
+                  {photo}
+                  <span className="pick-check">{doneOf(l) && <Icon name="check" size={20} stroke={2.6} />}</span>
+                </span>
+                <span className="pick-text">
+                  <strong>{l.items.name}</strong>
+                  <span>{l.items.sku ? `${l.items.sku} · ` : ''}{l.items.code}{l.items.colour ? ` · ${l.items.colour}` : ''}</span>
+                  <span>{where}</span>
+                </span>
+              </button>
+            )
+            const key = `${k}|${l.id}`
+            const n = b.filter(doneOf).length
+            const all = n === b.length
+            const open = !!openSet[key]
+            const flip = () => setOpenSet((o) => ({ ...o, [key]: !o[key] }))
+            const tickAll = () => { b.filter((x) => doneOf(x) === all).forEach(toggle) }
+            return (
+              <div key={key} className={`pick pick-card pick-multi ${all ? 'done' : ''} ${b.some((x) => x.missing_at && !doneOf(x)) ? 'missing' : ''}`}>
+                <span className="pick-photo" onClick={flip}>
+                  {photo}
+                  <span className="pick-qty">× {b.length}</span>
+                </span>
+                <button type="button" className="pick-check pick-check-btn" onClick={tickAll} aria-label={all ? 'Untick all' : 'Tick all'}>
+                  {all ? <Icon name="check" size={20} stroke={2.6} /> : n > 0 ? <small>{n}/{b.length}</small> : null}
+                </button>
+                <button type="button" className="pick-text" onClick={flip}>
+                  <strong>{l.items.name}</strong>
+                  <span>{l.items.sku ? `${l.items.sku} · ` : ''}{b.length} pieces{l.items.colour ? ` · ${l.items.colour}` : ''}</span>
+                  <span>{where}</span>
+                  <span className="pick-more">{n} of {b.length} {cfg.done} · {open ? 'Hide' : 'Show'} item numbers <Icon name={open ? 'up' : 'down'} size={14} /></span>
+                </button>
+                {open && (
+                  <div className="pick-subs">
+                    {b.map((x) => (
+                      <button type="button" key={x.id} className={`pick-sub ${doneOf(x) ? 'done' : ''}`} onClick={() => toggle(x)}>
+                        <span>{x.items.code}{x.missing_at && !doneOf(x) ? <b className="warn-text"> · Missing</b> : ''}</span>
+                        <span className="pick-sub-check">{doneOf(x) && <Icon name="check" size={16} stroke={2.6} />}</span>
+                      </button>
+                    ))}
+                    <button type="button" className="btn btn-small btn-ghost" onClick={tickAll}>{all ? 'Untick all' : `Tick all ${b.length}`}</button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
           </div>
         </section>
       ))}
