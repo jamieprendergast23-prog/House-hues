@@ -33,6 +33,8 @@ export default function PickList() {
   const [missingNote, setMissingNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [openSet, setOpenSet] = useState({})
+  const [view, setViewState] = useState(() => { try { return localStorage.getItem('hh.pickView') || 'grid' } catch { return 'grid' } })
+  const setView = (v) => { setViewState(v); try { localStorage.setItem('hh.pickView', v) } catch {} }
 
   const load = useCallback(async () => {
     const [j, l, ph] = await Promise.all([
@@ -182,6 +184,14 @@ export default function PickList() {
           <button className={sort === 'shed' ? 'on' : ''} onClick={() => setSort('shed')}>Shed spot</button>
         </div>
       </div>
+      <div className="row">
+        <span className="small muted">View</span>
+        <div className="seg">
+          <button className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')}>Grid</button>
+          <button className={view === 'large' ? 'on' : ''} onClick={() => setView('large')}>Large</button>
+          <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>List</button>
+        </div>
+      </div>
       {sort === 'install' && mode === 'pack' && (
         <p className="small muted">Load the truck in reverse (décor and art first, rugs last) so rugs come off first at the house.</p>
       )}
@@ -205,7 +215,7 @@ export default function PickList() {
               See {sitePhotos(k).length} site photo{sitePhotos(k).length > 1 ? 's' : ''} of the empty room
             </button>
           )}
-          <div className="pick-cards">
+          <div className={`pick-cards v-${view}`}>
           {bundle(groups[k]).map((b) => {
             const l = b[0]
             const where = l.missing_at && !l.returned_at && b.length === 1 ? <b className="warn-text">Marked missing</b> : sort === 'room' ? `Shed: ${l.items.shed_location || '—'}` : sort === 'install' ? `${l.room} · Shed: ${l.items.shed_location || '—'}` : `Room: ${l.room}`

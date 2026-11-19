@@ -1076,3 +1076,20 @@ input, select, textarea { border-radius: 10px; }
 .pick-sub.done .pick-sub-check { background: var(--ok); border-color: var(--ok); color: #fff; }
 
 .pick-multi.is-open .pick-photo { aspect-ratio: 16 / 9; }
+
+/* pick list view options: grid (default), large, list */
+.pick-cards.v-large { grid-template-columns: minmax(0, 1fr); gap: 12px; max-width: 560px; }
+.pick-cards.v-large .pick-photo { aspect-ratio: 4 / 3; }
+.pick-cards.v-large .pick-card .pick-check, .pick-cards.v-large .pick-check-btn { top: 10px; right: 10px; width: 48px; height: 48px; }
+.pick-cards.v-large .pick-card .pick-text { padding: 12px 14px 14px; gap: 3px; }
+.pick-cards.v-large .pick-card .pick-text strong { font-size: 1.1rem; }
+.pick-cards.v-large .pick-card .pick-text span { font-size: .88rem; }
+.pick-cards.v-large .pick-qty { left: 10px; bottom: 10px; }
+
+.pick-cards.v-list { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.pick-cards.v-list .pick.pick-card { flex-direction: row; flex-wrap: wrap; align-items: center; position: relative; padding: 8px 66px 8px 8px; }
+.pick-cards.v-list .pick-card .pick-photo { position: static; width: 64px; height: 64px; aspect-ratio: auto; flex: none; border-radius: 10px; overflow: hidden; }
+.pick-cards.v-list .pick-card .pick-check, .pick-cards.v-list .pick-check-btn { top: 19px; right: 10px; width: 42px; height: 42px; }
+.pick-cards.v-list .pick-card .pick-text { flex: 1; min-width: 0; padding: 0 0 0 12px; }
+.pick-cards.v-list .pick-qty { left: 12px; top: 50px; bottom: auto; font-size: .72rem; padding: 2px 7px; }
+.pick-cards.v-list .pick-subs { flex-basis: 100%; margin: 8px -58px 0 0; padding: 8px 0 0; }
