@@ -100,7 +100,7 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
           </div>
         ))}
         <label className={`ps-add ${busy === key ? 'busy' : ''}`}>
-          {busy === key ? 'Uploading…' : kind === 'design' ? '+ Design' : kind === 'after' ? '+ After photo' : '+ Site photo'}
+          {busy === key ? <span className="ps-add-txt">Uploading…</span> : <><Icon name="plus" size={18} /><span className="ps-add-txt">Add</span></>}
           <input type="file" accept="image/*" multiple hidden onChange={(e) => { const f = [...e.target.files]; e.target.value = ''; upload(room, kind, f) }} />
         </label>
       </div>
@@ -109,16 +109,18 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
 
   return (
     <section className="card">
-      <div className="row between">
-        <h2>Rooms &amp; furniture <span className="muted small">{lines.length} pieces · {packedCount} packed</span></h2>
+      <div className="sec-head">
+        <h2>Rooms &amp; furniture</h2>
+        <span className="sec-meta">{lines.length} pieces{lines.length ? ` · ${packedCount} packed` : ''}</span>
       </div>
-      <p className="small muted">For each room: site photos from the visit, the design (screenshots or renders from your planner), and the furniture. The crew see the design at the top of each room on their pick list.</p>
 
-      <div className="row">
-        <button type="button" className="btn btn-primary" onClick={() => onAddFurniture(UNPLACED)}>+ Pick furniture for this house</button>
-        <button type="button" className="btn" onClick={() => setNewRoom('')}>+ Add room</button>
-        <button type="button" className="btn" onClick={() => setImporting(true)}>Import design list</button>
-        <button type="button" className="btn" onClick={onOpenPickList}>Open pick list</button>
+      <button type="button" className="btn btn-primary btn-block" onClick={() => onAddFurniture(UNPLACED)}>
+        <Icon name="plus" size={18} /> Pick furniture
+      </button>
+      <div className="toolbar3">
+        <button type="button" className="tool" onClick={() => setNewRoom('')}><Icon name="house" size={20} /><span>Add room</span></button>
+        <button type="button" className="tool" onClick={() => setImporting(true)}><Icon name="import" size={20} /><span>Import list</span></button>
+        <button type="button" className="tool" onClick={onOpenPickList}><Icon name="jobs" size={20} /><span>Pick list</span></button>
       </div>
       {newRoom !== null && (
         <div className="room-picker">
@@ -131,8 +133,8 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
 
       {unplaced.length > 0 && (
         <div className="room-block unplaced">
-          <h3 className="room">Not in a room yet <span className="muted small">{unplaced.length} pieces</span></h3>
-          <p className="small muted">Tick pieces, then tap the room they go in. Or choose a room on each line.</p>
+          <div className="room-head"><h3>Not in a room yet</h3><span className="sec-meta">{unplaced.length}</span></div>
+          <p className="small muted" style={{ margin: 0 }}>Tick pieces, then tap a room.</p>
           <div className="row">
             <button type="button" className="btn btn-small btn-ghost" onClick={() => setPicked(picked.size === unplaced.length ? new Set() : new Set(unplaced.map((l) => l.id)))}>
               {picked.size === unplaced.length ? 'Clear' : 'Select all'}
@@ -152,6 +154,7 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
                 <Thumb url={l.items.photo_url} size={48} />
                 <div className="grow">
                   <div className="row-title">{l.items.name}</div>
+                  {l.items.description && <div className="row-desc">{l.items.description}</div>}
                   <div className="row-sub">{[l.items.sku, l.items.code].filter(Boolean).join(' · ')}</div>
                 </div>
                 <select value="" onChange={(e) => e.target.value && assign([l.id], e.target.value)} style={{ width: 'auto', minHeight: 38 }} disabled={moving}>
@@ -171,11 +174,11 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
         const ls = lines.filter((l) => l.room === room)
         return (
           <div key={room} className="room-block">
-            <h3 className="room">{room} <span className="muted small">{ls.length} pieces</span></h3>
+            <div className="room-head"><h3>{room}</h3><span className="sec-meta">{ls.length} piece{ls.length === 1 ? '' : 's'}</span></div>
             <div className="room-photos">
-              <div><div className="field-label">Design</div>{strip(room, 'design')}</div>
-              <div><div className="field-label">Site photos (before)</div>{strip(room, 'site')}</div>
-              <div><div className="field-label">Styled photos (after)</div>{strip(room, 'after')}</div>
+              <div><div className="eyebrow">Design</div>{strip(room, 'design')}</div>
+              <div><div className="eyebrow">Before</div>{strip(room, 'site')}</div>
+              <div><div className="eyebrow">Styled</div>{strip(room, 'after')}</div>
             </div>
             {ls.length > 0 && (
               <ul className="list">
@@ -184,17 +187,18 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
                     <Thumb url={l.items.photo_url} size={44} />
                     <div className="grow">
                       <Link to={`/inventory/${l.items.id}`} className="row-title">{l.items.name}</Link>
+                      {l.items.description && <div className="row-desc">{l.items.description}</div>}
                       <div className="row-sub">{[l.items.sku, l.items.code].filter(Boolean).join(' · ')} · {l.returned_at ? 'Back in shed' : l.packed_at ? 'Packed / out' : `Shed ${l.items.shed_location || '—'}`}</div>
                     </div>
                     <select value={l.room} onChange={(e) => assign([l.id], e.target.value)} style={{ width: 'auto', minHeight: 36, fontSize: '.85rem', padding: '4px 8px' }} disabled={moving} aria-label="Move to room">
                       {[...new Set([l.room, ...roomChoices, UNPLACED])].map((r) => <option key={r} value={r}>{r === UNPLACED ? 'No room' : r}</option>)}
                     </select>
-                    {!l.packed_at && <button type="button" className="btn btn-ghost btn-small" onClick={() => onRemoveLine(l.id)}>Remove</button>}
+                    {!l.packed_at && <button type="button" className="icon-btn" onClick={() => onRemoveLine(l.id)} aria-label={`Remove ${l.items.name}`}><Icon name="close" size={16} /></button>}
                   </li>
                 ))}
               </ul>
             )}
-            <button type="button" className="btn btn-small" onClick={() => onAddFurniture(room)}>+ Add furniture to {room}</button>
+            <button type="button" className="add-line" onClick={() => onAddFurniture(room)}><Icon name="plus" size={16} /> Add furniture to {room}</button>
           </div>
         )
       })}

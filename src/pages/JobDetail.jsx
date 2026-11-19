@@ -51,7 +51,7 @@ export default function JobDetail() {
   const loadLines = useCallback(async () => {
     if (isNew) return
     const { data } = await supabase.from('job_items')
-      .select('id, room, packed_at, returned_at, items(id, code, sku, name, category, photo_url, shed_location)')
+      .select('id, room, packed_at, returned_at, items(id, code, sku, name, description, category, photo_url, shed_location)')
       .eq('job_id', id).order('room')
     setLines(data || [])
   }, [id, isNew])
