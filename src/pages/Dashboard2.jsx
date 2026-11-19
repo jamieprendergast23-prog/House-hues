@@ -190,11 +190,11 @@ export default function Dashboard2() {
               <b>{s.out} of {s.pieces}</b>
               <span className="tc-sub">pieces out on hire ({util}%)</span>
               <div className="meter meter-split"><span style={{ width: `${s.pieces ? (s.out / s.pieces) * 100 : 0}%` }} /><span className="m-booked" style={{ width: `${bookedPct}%` }} /></div>
-              {s.held > 0 && <span className="tc-sub tc-held">+ {s.held} booked for upcoming houses</span>}
+              {s.held > 0 && <span className="tc-sub tc-held">+ {s.held} allocated to upcoming houses</span>}
             </div>
             <div className="tc-row tc-counts">
               <span><b>{s.inShed}</b> in shed</span>
-              <span><b>{s.held}</b> booked</span>
+              <span><b>{s.held}</b> allocated</span>
               <span><b>{s.repair}</b> repair</span>
               <span><b>{s.missing}</b> missing</span>
             </div>
