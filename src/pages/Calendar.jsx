@@ -7,6 +7,7 @@ import { toISO, today, hireEnd, parseDate, addDays } from '../lib/format'
 import { Loading, TypeTag, Modal, Field } from '../components/ui'
 import { useAuth } from '../lib/auth'
 import Icon from '../components/Icon'
+import MapLink from '../components/MapLink'
 
 export function jobEvents(jobs) {
   const ev = []
@@ -305,7 +306,7 @@ function EventEditor({ e, canDates, onClose, onSaved }) {
   return (
     <Modal title={r ? 'Note' : e.label} onClose={onClose}>
       <form className="stack" onSubmit={save}>
-        <p className="small muted" style={{ margin: 0 }}>{e.job ? e.job.property_address : 'Not linked to a house'}</p>
+        <p className="small muted row" style={{ margin: 0, gap: 8, alignItems: 'center' }}>{e.job ? e.job.property_address : 'Not linked to a house'}{e.job && <MapLink job={e.job} className="btn btn-small" />}</p>
         {r && <Field label="Note"><textarea rows={3} value={title} onChange={(ev) => setTitle(ev.target.value)} /></Field>}
         <Field label={r ? 'Remind on' : 'Date'}>
           <input type="date" required value={date || ''} onChange={(ev) => setDate(ev.target.value)} disabled={!editable} />

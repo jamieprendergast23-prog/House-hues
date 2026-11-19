@@ -13,6 +13,7 @@ import StockPicker from '../components/StockPicker'
 import JobRooms from '../components/JobRooms'
 import { Field, Modal, Loading, TypeTag, JobPill } from '../components/ui'
 import Icon from '../components/Icon'
+import MapLink from '../components/MapLink'
 
 const BLANK_JOB = {
   type: 'staging', status: ERP ? 'enquiry' : 'quote_sent', property_address: '', suburb: '', access_notes: '', notes: '',
@@ -152,7 +153,7 @@ export default function JobDetail() {
       <div className="page-head">
         <div>
           <h1>{isNew ? (ERP ? 'New job' : 'New job: where is stock going?') : job.property_address}</h1>
-          {!isNew && <div className="row-pills"><span className="muted">#{job.job_number}</span>{ERP && <TypeTag type={job.type} />}<JobPill job={job} /></div>}
+          {!isNew && <div className="row-pills"><MapLink job={job} className="btn btn-small" /><span className="muted">#{job.job_number}</span>{ERP && <TypeTag type={job.type} />}<JobPill job={job} /></div>}
         </div>
       </div>
 

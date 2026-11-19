@@ -6,6 +6,7 @@ import { paymentLabel } from '../components/HireCard'
 import { Loading, Modal, Field } from '../components/ui'
 import { toast } from '../lib/toast'
 import StockPicker from '../components/StockPicker'
+import MapLink from '../components/MapLink'
 
 // Her whiteboard, digital. Houses flow left to right: quote → booked → out → pack up.
 const COLS = [
@@ -199,6 +200,7 @@ export default function Houses() {
       {sheet && (
         <Modal title={sheet.property_address} onClose={() => setSheet(null)}>
           <div className="stack action-sheet">
+            <MapLink job={sheet} label="Open in Google Maps" className="btn btn-block" />
             {sheetCol === 'out' && (
               <>
                 <p className="muted small">Hire ends {fmtLong(hireEnd(sheet))}</p>

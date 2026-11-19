@@ -180,7 +180,7 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
             {ls.length > 0 && (
               <ul className="list">
                 {ls.map((l) => (
-                  <li key={l.id} className="list-row">
+                  <li key={l.id} className="list-row furn-row">
                     <Thumb url={l.items.photo_url} size={44} />
                     <div className="grow">
                       <Link to={`/inventory/${l.items.id}`} className="row-title">{l.items.name}</Link>

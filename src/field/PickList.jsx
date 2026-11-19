@@ -8,6 +8,7 @@ import Scanner from '../components/Scanner'
 import PhotoViewer from '../components/PhotoViewer'
 import { installStep } from '../lib/installOrder'
 import Icon from '../components/Icon'
+import MapLink from '../components/MapLink'
 
 // pack   = at the shed, loading for install
 // load   = at the house on pack-up day, loading the truck (the pack-up check)
@@ -135,6 +136,7 @@ export default function PickList() {
     <div className="stack">
       <div>
         <h1 className="field-title">{job.property_address}</h1>
+        <MapLink job={job} label="Open in Google Maps" className="btn btn-block field-map" />
         <p className="muted">
           {job.pack_date && <>Pack {fmtDate(job.pack_date)} · </>}
           {job.install_date && <>Install {fmtDate(job.install_date)} · </>}

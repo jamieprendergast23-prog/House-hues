@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { today, addDays, fmtDate, hireEnd } from '../lib/format'
 import { Loading, Empty } from '../components/ui'
 import Icon from '../components/Icon'
+import MapLink from '../components/MapLink'
 
 const ACTIVE = ['accepted', 'booked', 'packing', 'installed', 'collected']
 
@@ -66,13 +67,16 @@ function Section({ title, jobs, empty, highlight }) {
         const returning = ['Collection', 'Unpack'].includes(j.task[0])
         const n = returning ? back : packed
         return (
-          <Link key={j.id} to={`/pick/${j.id}`} className={`job-tile ${highlight ? 'today' : ''}`}>
+          <div key={j.id} className="job-tile-wrap">
+          <Link to={`/pick/${j.id}`} className={`job-tile ${highlight ? 'today' : ''}`}>
             <div className="job-tile-task">{j.task[0]} · {fmtDate(j.task[1])}</div>
             <div className="job-tile-addr">{j.property_address}</div>
             {j.suburb && <div className="muted">{j.suburb}</div>}
             <div className="progress"><i style={{ width: `${total ? (n / total) * 100 : 0}%` }} /></div>
             <div className="small">{n} of {total} {returning ? 'back in shed' : 'packed'}</div>
           </Link>
+          <MapLink job={j} className="btn btn-small job-tile-map" />
+          </div>
         )
       })}
     </section>
