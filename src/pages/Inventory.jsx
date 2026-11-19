@@ -20,9 +20,10 @@ function groupPieces(items) {
   for (const i of items) {
     const key = `${i.category}\u0000${i.sku || ''}\u0000${i.name}`
     let g = map.get(key)
-    if (!g) { g = { key, name: i.name, sku: i.sku, category: i.category, subcategory: i.subcategory, pieces: [], photo: null }; map.set(key, g) }
+    if (!g) { g = { key, name: i.name, description: i.description, sku: i.sku, category: i.category, subcategory: i.subcategory, pieces: [], photo: null }; map.set(key, g) }
     g.pieces.push(i)
     if (!g.photo && i.photo_url) g.photo = i.photo_url
+    if (!g.description && i.description) g.description = i.description
   }
   return [...map.values()].map((g) => ({
     ...g,
@@ -123,7 +124,7 @@ export default function Inventory() {
 
   const exportCSV = () => {
     const rows = shownPieces.map((i) => ({
-      Code: i.code, 'Your code': i.sku || '', Description: i.name, Category: i.category, Colour: i.colour || '', Size: i.dimensions || '',
+      Code: i.code, 'Your code': i.sku || '', Name: i.name, Description: i.description || '', Category: i.category, Colour: i.colour || '', Size: i.dimensions || '',
       'Shed spot': i.shed_location || '', Condition: i.condition, Status: i.status,
       'Out at': i.out_address || '', 'Next job': i.next_address || '', 'Next date': i.next_start || '',
     }))
@@ -207,6 +208,7 @@ export default function Inventory() {
                   {g.photo ? <img className="sl-img" src={g.photo} alt="" loading="lazy" /> : <span className="sl-img sl-noimg">{g.sku || ''}</span>}
                   <span className="sl-main">
                     <span className="sl-name">{g.name}</span>
+                    {g.description && <span className="sl-desc">{g.description}</span>}
                     <span className="sl-sub">{[g.sku, g.subcategory && g.subcategory !== 'To sort' ? g.subcategory : g.category].filter(Boolean).join(' · ')}</span>
                   </span>
                   <span className="sl-qty">{g.pieces.length > 1 ? `×${g.pieces.length}` : ''}</span>
@@ -231,6 +233,7 @@ export default function Inventory() {
                 </div>
                 <div className="tile-body">
                   <div className="tile-name">{g.name}</div>
+                  {g.description && <div className="tile-desc">{g.description}</div>}
                   <div className="tile-cat">{g.sku ? `${g.sku} · ` : ''}{g.subcategory && g.subcategory !== 'To sort' ? g.subcategory : g.category}</div>
                   <div className="tile-status">
                     {g.inCount > 0 && <span className="st st-in">{g.inCount} in</span>}

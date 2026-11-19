@@ -139,7 +139,8 @@ export default function ItemDetail({ byCode }) {
           </label>
         </div>
 
-        <Field label="Description"><input required value={item.name} onChange={set('name')} placeholder="e.g. Linen 3-seater sofa" /></Field>
+        <Field label="Name"><input required value={item.name} onChange={set('name')} placeholder="e.g. Gilli vase, tall" /></Field>
+        <Field label="Description" hint="What it actually looks like, e.g. twist/stacked stones vase, white"><textarea rows={2} value={item.description || ''} onChange={set('description')} /></Field>
         <Field label="Your item code" hint="Your own code from the spreadsheet, e.g. V12. Optional."><input value={item.sku || ''} onChange={set('sku')} placeholder="V12" autoCapitalize="characters" /></Field>
         <div className="grid2">
           <Field label="Category">
@@ -195,6 +196,7 @@ export default function ItemDetail({ byCode }) {
       <div className="page-head">
         <div>
           <h1 className="item-title">{item.name}</h1>
+          {item.description && <p className="item-desc">{item.description}</p>}
           <div className="muted">{[item.sku, item.code].filter(Boolean).join(' · ')}</div>
         </div>
         <div className="row">

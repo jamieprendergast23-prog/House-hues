@@ -39,9 +39,10 @@ export default function StockPicker({ jobId, onClose, initialRoom }) {
     for (const i of items || []) {
       const key = `${i.category}\u0000${i.sku || ''}\u0000${i.name}`
       let g = map.get(key)
-      if (!g) { g = { key, name: i.name, sku: i.sku, category: i.category, subcategory: i.subcategory, photo: null, pieces: [] }; map.set(key, g) }
+      if (!g) { g = { key, name: i.name, description: i.description, sku: i.sku, category: i.category, subcategory: i.subcategory, photo: null, pieces: [] }; map.set(key, g) }
       g.pieces.push(i)
       if (!g.photo && i.photo_url) g.photo = i.photo_url
+      if (!g.description && i.description) g.description = i.description
     }
     return [...map.values()].map((g) => {
       // pieces in the shed first, then the ones coming back soonest
@@ -58,7 +59,7 @@ export default function StockPicker({ jobId, onClose, initialRoom }) {
     if (cat && g.category !== cat) return false
     if (sub && g.subcategory !== sub) return false
     const s = q.trim().toLowerCase()
-    return !s || [g.name, g.sku, g.category, g.subcategory, g.pieces[0].colour].some((v) => v?.toLowerCase().includes(s))
+    return !s || [g.name, g.description, g.sku, g.category, g.subcategory, g.pieces[0].colour].some((v) => v?.toLowerCase().includes(s))
   })
 
   const setCount = (g, n) => setWant((w) => {
@@ -132,6 +133,7 @@ export default function StockPicker({ jobId, onClose, initialRoom }) {
                 </button>
                 <div className="pg-body">
                   <div className="pg-name">{g.name}</div>
+                  {g.description && <div className="pg-desc">{g.description}</div>}
                   <div className="pg-sub">{[g.sku, g.subcategory || g.category].filter(Boolean).join(' · ')}</div>
                   {g.freeNow === 0 && soonest && <div className="pg-back">Out at {soonest.out_address} until {fmtDate(soonest.out_until)}</div>}
                   {g.freeNow > 0 && g.back.length > 0 && <div className="pg-back">{g.freeNow} in shed · {g.back.length} out on hire</div>}

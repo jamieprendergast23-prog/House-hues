@@ -10,7 +10,8 @@ import { openWorkbook, readSheet, imageBlob, canShow } from '../lib/xlsx'
 
 // Fields we can fill, header words that usually mean them (best first), and words that rule a header out
 const FIELDS = [
-  ['name', 'Description *', ['description', 'desc', 'item name', 'product', 'name', 'item'], ['code', 'no', '#']],
+  ['name', 'Name *', ['item name', 'product name', 'name', 'product', 'title', 'item'], ['code', 'no', '#', 'description', 'desc']],
+  ['description', 'Description', ['description', 'desc', 'details', 'about'], []],
   ['sku', 'Your item code', ['item code', 'code', 'sku', 'ref', 'item no', 'item #', 'stock no', 'no.', '#', 'id'], ['qty', 'description']],
   ['category', 'Category', ['category', 'type', 'group', 'cat'], []],
   ['colour', 'Colour', ['colour', 'color', 'finish'], []],
@@ -130,7 +131,9 @@ export default function ImportStock() {
     const get = (k) => (map[k] !== undefined ? (r[map[k]] || '').trim() : '')
     return {
       img: row.images.find(canShow) || null,
-      name: get('name') || get('sku'), sku: get('sku') || null, supplier: get('supplier') || null, category: matchCategory(get('category')), colour: get('colour') || null,
+      name: get('name') || get('description') || get('sku'),
+      description: get('name') && get('description') && get('description').toLowerCase() !== get('name').toLowerCase() ? get('description') : null,
+      sku: get('sku') || null, supplier: get('supplier') || null, category: matchCategory(get('category')), colour: get('colour') || null,
       dimensions: get('dimensions') || null, shed_location: get('shed_location') || null,
       condition: matchCondition(get('condition')), notes: get('notes') || null,
       qty: Math.max(1, Math.min(100, parseInt(get('qty'), 10) || 1)),
@@ -140,7 +143,7 @@ export default function ImportStock() {
 
   const pieces = parsed.reduce((n, r) => n + r.qty, 0)
   const withPhoto = parsed.filter((r) => r.img).length
-  const orphanPhotos = body.filter((r) => r.images.length && ![map.name, map.sku].some((i) => i !== undefined && (r.cells[i] || '').trim())).length
+  const orphanPhotos = body.filter((r) => r.images.length && ![map.name, map.description, map.sku].some((i) => i !== undefined && (r.cells[i] || '').trim())).length
 
   // Re-importing the same sheet: match rows to pieces already in stock by her code
   const plan = useMemo(() => {
@@ -204,6 +207,7 @@ export default function ImportStock() {
           const { r, hits } = upd.shift()
           const fields = {
             name: r.name, sku: r.sku, category: r.category,
+            ...(r.description ? { description: r.description } : {}),
             ...(r.colour ? { colour: r.colour } : {}), ...(r.dimensions ? { dimensions: r.dimensions } : {}),
             ...(r.shed_location ? { shed_location: r.shed_location } : {}), ...(r.notes ? { notes: r.notes } : {}),
           }
@@ -229,7 +233,7 @@ export default function ImportStock() {
         setProgress({ label: 'Adding pieces', done: i, total: all.length })
         const { data, error } = await supabase.from('items').insert(chunk.map((r) => ({
           photo_url: photos.get(r) || null,
-          name: r.name, sku: r.sku, category: r.category, colour: r.colour, dimensions: r.dimensions,
+          name: r.name, description: r.description, sku: r.sku, category: r.category, colour: r.colour, dimensions: r.dimensions,
           shed_location: r.shed_location, condition: r.condition, notes: r.notes,
           status: r.condition === 'needs_repair' ? 'repair' : 'available',
         }))).select('id')
@@ -311,13 +315,13 @@ export default function ImportStock() {
           </div>
         )}
         {orphanPhotos > 0 && <p className="small warn-text">{orphanPhotos} photos sit on rows with no item name, so they’ll be skipped. Check the picture is placed on the same row as its item.</p>}
-        {map.name === undefined && map.sku === undefined ? <p className="warn-text">Pick which column has the description.</p> : (
+        {map.name === undefined && map.description === undefined && map.sku === undefined ? <p className="warn-text">Pick which column has the name.</p> : (
           <div className="tbl-wrap">
             <table className="tbl">
-              <thead><tr>{book.current && <th>Photo</th>}<th>Code</th><th>Description</th><th>Category</th><th>Qty</th><th>Shop</th><th>Price ea</th></tr></thead>
+              <thead><tr>{book.current && <th>Photo</th>}<th>Code</th><th>Name / description</th><th>Category</th><th>Qty</th><th>Shop</th><th>Price ea</th></tr></thead>
               <tbody>
                 {parsed.slice(0, 12).map((r, i) => (
-                  <tr key={i}>{book.current && <td><PreviewImg path={r.img} book={book.current} /></td>}<td>{r.sku}</td><td>{r.name}</td><td>{r.category}</td><td>{r.qty}</td><td>{r.supplier}</td><td>{r.purchase_cost ?? ''}</td></tr>
+                  <tr key={i}>{book.current && <td><PreviewImg path={r.img} book={book.current} /></td>}<td>{r.sku}</td><td><b>{r.name}</b>{r.description && <div className="small muted">{r.description}</div>}</td><td>{r.category}</td><td>{r.qty}</td><td>{r.supplier}</td><td>{r.purchase_cost ?? ''}</td></tr>
                 ))}
               </tbody>
             </table>
@@ -334,7 +338,7 @@ export default function ImportStock() {
         </div>
       )}
       <div className="sticky-actions row">
-        <button className="btn btn-primary btn-big grow" disabled={!pieces || busy || (map.name === undefined && map.sku === undefined)} onClick={run}>
+        <button className="btn btn-primary btn-big grow" disabled={!pieces || busy || (map.name === undefined && map.description === undefined && map.sku === undefined)} onClick={run}>
           {busy ? 'Importing…' : toUpdate ? `Update ${toUpdate}${toAdd ? ` + add ${toAdd}` : ''} pieces` : `Add ${pieces} pieces to stock`}
         </button>
       </div>

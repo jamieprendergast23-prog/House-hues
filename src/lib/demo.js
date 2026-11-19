@@ -56,7 +56,7 @@ function seed() {
     const id = uid()
     db.items.push({
       id, code: `HH-${String(db._itemSeq++).padStart(4, '0')}`, sku: skuFor(name, category), name, category, colour, dimensions,
-      description: null, shed_location, condition: i === 5 ? 'needs_repair' : 'good',
+      description: colour ? `${colour} ${name.toLowerCase()}${dimensions ? `, ${dimensions}` : ''}` : null, shed_location, condition: i === 5 ? 'needs_repair' : 'good',
       status: i === 5 ? 'repair' : 'available', photo_url: null,
       notes: i === 5 ? 'Broken weave on left arm' : null, created_at: nowISO(), updated_at: nowISO(),
     })
