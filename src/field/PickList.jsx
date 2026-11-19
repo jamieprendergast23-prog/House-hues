@@ -192,17 +192,21 @@ export default function PickList() {
               See {sitePhotos(k).length} site photo{sitePhotos(k).length > 1 ? 's' : ''} of the empty room
             </button>
           )}
+          <div className="pick-cards">
           {groups[k].sort((a, b) => doneOf(a) - doneOf(b)).map((l) => (
-            <button key={l.id} className={`pick ${doneOf(l) ? 'done' : ''} ${l.missing_at && !doneOf(l) ? 'missing' : ''}`} onClick={() => toggle(l)}>
-              {l.items.photo_url ? <img src={l.items.photo_url} alt="" /> : <span className="pick-noimg" />}
+            <button key={l.id} className={`pick pick-card ${doneOf(l) ? 'done' : ''} ${l.missing_at && !doneOf(l) ? 'missing' : ''}`} onClick={() => toggle(l)}>
+              <span className="pick-photo">
+                {l.items.photo_url ? <img src={l.items.photo_url} alt="" loading="lazy" /> : <span className="pick-noimg"><Icon name="image" size={34} /></span>}
+                <span className="pick-check">{doneOf(l) && <Icon name="check" size={20} stroke={2.6} />}</span>
+              </span>
               <span className="pick-text">
                 <strong>{l.items.name}</strong>
                 <span>{l.items.sku ? `${l.items.sku} · ` : ''}{l.items.code}{l.items.colour ? ` · ${l.items.colour}` : ''}</span>
                 <span>{l.missing_at && !l.returned_at ? <b className="warn-text">Marked missing</b> : sort === 'room' ? `Shed: ${l.items.shed_location || '—'}` : sort === 'install' ? `${l.room} · Shed: ${l.items.shed_location || '—'}` : `Room: ${l.room}`}</span>
               </span>
-              <span className="pick-check">{doneOf(l) && <Icon name="check" size={18} stroke={2.4} />}</span>
             </button>
           ))}
+          </div>
         </section>
       ))}
 
