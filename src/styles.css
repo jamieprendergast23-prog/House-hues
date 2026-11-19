@@ -1014,3 +1014,24 @@ input, select, textarea { border-radius: 10px; }
 .add-line:hover { color: var(--ink); border-color: #bfb3a4; background: #fbf9f6; }
 .field + .field, .grid2 + .field, .field + .grid2 { margin-top: 14px; }
 .grid2 { row-gap: 14px; }
+
+/* room photos: one area with Design / Before / Styled tabs and a square-thumbnail grid */
+.gallery { margin-top: 10px; }
+.gal-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 12px; background: #ece6dd;
+  box-shadow: inset 0 1px 3px rgba(58,44,30,.1); }
+.gal-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--muted); font: inherit; font-size: .88rem; font-weight: 500; cursor: pointer; }
+.gal-tabs button.on { background: #fff; color: var(--ink); box-shadow: var(--hi), 0 1px 3px rgba(58,44,30,.14); }
+.gal-n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--ink); color: #fff; font-size: .72rem; display: inline-grid; place-items: center; }
+.gal-tabs button:not(.on) .gal-n { background: #b9ad9f; }
+.gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 10px; }
+@media (max-width: 600px) { .gal-grid { grid-template-columns: repeat(3, 1fr); } }
+.gal-item { position: relative; aspect-ratio: 1 / 1; }
+.gal-img { width: 100%; height: 100%; padding: 0; border: 0; border-radius: 10px; overflow: hidden; background: #eee8e0; cursor: zoom-in; box-shadow: var(--sh-1); display: block; }
+.gal-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gal-del { position: absolute; top: 5px; right: 5px; width: 24px; height: 24px; border-radius: 50%; border: 0; display: grid; place-items: center;
+  background: rgba(20,20,20,.55); color: #fff; cursor: pointer; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.gal-add { aspect-ratio: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 4px;
+  border: 1.5px dashed #d6cdc1; border-radius: 10px; background: #fbf9f6; color: var(--muted); font-size: .76rem; font-weight: 500; cursor: pointer; }
+.gal-add:hover { color: var(--ink); border-color: #bfb3a4; }
+.gal-add.busy { opacity: .6; }

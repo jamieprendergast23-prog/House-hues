@@ -20,6 +20,7 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
   const [extra, setExtra] = useState([])
   const [busy, setBusy] = useState('')
   const [viewer, setViewer] = useState(null)
+  const [photoTab, setPhotoTab] = useState({}) // room -> 'design' | 'site' | 'after'
   const [newRoom, setNewRoom] = useState(null)
   const [importing, setImporting] = useState(false)
   const [picked, setPicked] = useState(new Set())
@@ -86,23 +87,39 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
     setNewRoom(null)
   }
 
-  const strip = (room, kind) => {
-    const list = photos.filter((p) => p.room === room && p.kind === kind)
-    const key = `${room}-${kind}`
+
+  const KINDS = [['design', 'Design'], ['site', 'Before'], ['after', 'Styled']]
+  const gallery = (room) => {
+    const count = (k) => photos.filter((p) => p.room === room && p.kind === k).length
+    // open on the first tab that has photos, else Design
+    const tab = photoTab[room] || KINDS.find(([k]) => count(k))?.[0] || 'design'
+    const list = photos.filter((p) => p.room === room && p.kind === tab)
+    const label = KINDS.find(([k]) => k === tab)[1]
+    const key = `${room}-${tab}`
     return (
-      <div className="photo-strip">
-        {list.map((p, i) => (
-          <div key={p.id} className="ps-item">
-            <button type="button" className="ps-img" onClick={() => setViewer({ photos: list.map((x) => ({ url: x.url, label: `${room} · ${kind === 'design' ? 'design' : kind === 'after' ? 'styled' : 'before'}` })), start: i })}>
-              <img src={p.url} alt="" loading="lazy" />
+      <div className="gallery">
+        <div className="gal-tabs" role="tablist" aria-label={`${room} photos`}>
+          {KINDS.map(([k, l]) => (
+            <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''}
+              onClick={() => setPhotoTab({ ...photoTab, [room]: k })}>
+              {l}{count(k) > 0 && <span className="gal-n">{count(k)}</span>}
             </button>
-            <button type="button" className="ps-del" onClick={() => removePhoto(p)} aria-label="Remove photo"><Icon name="close" size={14} stroke={2} /></button>
-          </div>
-        ))}
-        <label className={`ps-add ${busy === key ? 'busy' : ''}`}>
-          {busy === key ? <span className="ps-add-txt">Uploading…</span> : <><Icon name="plus" size={18} /><span className="ps-add-txt">Add</span></>}
-          <input type="file" accept="image/*" multiple hidden onChange={(e) => { const f = [...e.target.files]; e.target.value = ''; upload(room, kind, f) }} />
-        </label>
+          ))}
+        </div>
+        <div className="gal-grid">
+          {list.map((p, i) => (
+            <div key={p.id} className="gal-item">
+              <button type="button" className="gal-img" onClick={() => setViewer({ photos: list.map((x) => ({ url: x.url, label: `${room} · ${label.toLowerCase()}` })), start: i })}>
+                <img src={p.url} alt={`${room} ${label.toLowerCase()} photo ${i + 1}`} loading="lazy" />
+              </button>
+              <button type="button" className="gal-del" onClick={() => removePhoto(p)} aria-label="Remove photo"><Icon name="close" size={12} stroke={2.4} /></button>
+            </div>
+          ))}
+          <label className={`gal-add ${busy === key ? 'busy' : ''}`}>
+            {busy === key ? <span>Uploading…</span> : <><Icon name="plus" size={20} /><span>{tab === 'design' ? 'Add design' : 'Add photo'}</span></>}
+            <input type="file" accept="image/*" multiple hidden onChange={(e) => { const f = [...e.target.files]; e.target.value = ''; upload(room, tab, f) }} />
+          </label>
+        </div>
       </div>
     )
   }
@@ -175,11 +192,7 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
         return (
           <div key={room} className="room-block">
             <div className="room-head"><h3>{room}</h3><span className="sec-meta">{ls.length} piece{ls.length === 1 ? '' : 's'}</span></div>
-            <div className="room-photos">
-              <div><div className="eyebrow">Design</div>{strip(room, 'design')}</div>
-              <div><div className="eyebrow">Before</div>{strip(room, 'site')}</div>
-              <div><div className="eyebrow">Styled</div>{strip(room, 'after')}</div>
-            </div>
+            {gallery(room)}
             {ls.length > 0 && (
               <ul className="list">
                 {ls.map((l) => (
