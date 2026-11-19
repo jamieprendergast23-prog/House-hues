@@ -230,7 +230,7 @@ export default function PickList() {
             const flip = () => setOpenSet((o) => ({ ...o, [key]: !o[key] }))
             const tickAll = () => { b.filter((x) => doneOf(x) === all).forEach(toggle) }
             return (
-              <div key={key} className={`pick pick-card pick-multi ${all ? 'done' : ''} ${b.some((x) => x.missing_at && !doneOf(x)) ? 'missing' : ''}`}>
+              <div key={key} className={`pick pick-card pick-multi ${open ? 'is-open' : ''} ${all ? 'done' : ''} ${b.some((x) => x.missing_at && !doneOf(x)) ? 'missing' : ''}`}>
                 <span className="pick-photo" onClick={flip}>
                   {photo}
                   <span className="pick-qty">× {b.length}</span>
@@ -242,7 +242,7 @@ export default function PickList() {
                   <strong>{l.items.name}</strong>
                   <span>{l.items.sku ? `${l.items.sku} · ` : ''}{b.length} pieces{l.items.colour ? ` · ${l.items.colour}` : ''}</span>
                   <span>{where}</span>
-                  <span className="pick-more">{n} of {b.length} {cfg.done} · {open ? 'Hide' : 'Show'} item numbers <Icon name={open ? 'up' : 'down'} size={14} /></span>
+                  <span className="pick-more">{n} of {b.length} {cfg.done} · {open ? 'Hide' : 'Show'} numbers <Icon name={open ? 'up' : 'down'} size={14} /></span>
                 </button>
                 {open && (
                   <div className="pick-subs">

@@ -1044,30 +1044,35 @@ input, select, textarea { border-radius: 10px; }
 .gal-sec .gal-grid { margin-top: 0; }
 
 /* pick list: big photo cards, words underneath */
-.pick-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-bottom: 10px; max-width: 560px; }
+.pick-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; align-items: start; }
+@media (min-width: 640px) { .pick-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1000px) { .pick-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.pick-multi.is-open { grid-column: 1 / -1; }
 .pick.pick-card { flex-direction: column; align-items: stretch; gap: 0; padding: 0; margin: 0; min-height: 0; overflow: hidden; border-radius: 14px; border-width: 2px; }
-.pick-photo { position: relative; display: block; aspect-ratio: 4 / 3; background: #f3efe9; }
+.pick-photo { position: relative; display: block; aspect-ratio: 1 / 1; background: #f3efe9; }
 .pick.pick-card .pick-photo img { width: 100%; height: 100%; object-fit: contain; border-radius: 0; background: #fff; display: block; }
 .pick.pick-card .pick-noimg { width: 100%; height: 100%; border-radius: 0; display: grid; place-items: center; color: var(--stone); }
-.pick.pick-card .pick-check { position: absolute; top: 10px; right: 10px; width: 48px; height: 48px; background: rgba(255,255,255,.92); border: 2.5px solid #cfc5b8; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+.pick.pick-card .pick-check { position: absolute; top: 8px; right: 8px; width: 42px; height: 42px; background: rgba(255,255,255,.92); border: 2.5px solid #cfc5b8; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
 .pick.pick-card.done .pick-check { background: var(--ok); border-color: var(--ok); color: #fff; }
-.pick.pick-card .pick-text { padding: 12px 14px 14px; gap: 3px; }
-.pick.pick-card .pick-text strong { font-size: 1.1rem; line-height: 1.25; }
-.pick.pick-card .pick-text span { font-size: .88rem; line-height: 1.35; }
+.pick.pick-card .pick-text { padding: 9px 10px 11px; gap: 2px; }
+.pick.pick-card .pick-text strong { font-size: .98rem; line-height: 1.25; }
+.pick.pick-card .pick-text span { font-size: .8rem; line-height: 1.3; }
 .pick.pick-card.done .pick-photo img { opacity: .55; }
 /* grouped identical pieces */
 .pick-multi { position: relative; display: flex; cursor: default; }
 .pick-multi .pick-photo { cursor: pointer; }
-.pick-multi .pick-text { all: unset; box-sizing: border-box; display: flex; flex-direction: column; text-align: left; cursor: pointer; padding: 12px 14px 14px; gap: 3px; }
-.pick-multi .pick-text strong { font-size: 1.1rem; line-height: 1.25; }
-.pick-multi .pick-text span { font-size: .88rem; line-height: 1.35; color: var(--muted, #7a736b); }
-.pick-check-btn { position: absolute; top: 10px; right: 10px; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.92); border: 2.5px solid #cfc5b8; box-shadow: 0 1px 4px rgba(0,0,0,.15); cursor: pointer; padding: 0; color: var(--ink, #222); }
+.pick-multi .pick-text { all: unset; box-sizing: border-box; display: flex; flex-direction: column; text-align: left; cursor: pointer; padding: 9px 10px 11px; gap: 2px; }
+.pick-multi .pick-text strong { font-size: .98rem; line-height: 1.25; }
+.pick-multi .pick-text span { font-size: .8rem; line-height: 1.35; color: var(--muted, #7a736b); }
+.pick-check-btn { position: absolute; top: 8px; right: 8px; width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.92); border: 2.5px solid #cfc5b8; box-shadow: 0 1px 4px rgba(0,0,0,.15); cursor: pointer; padding: 0; color: var(--ink, #222); }
 .pick-check-btn small { font-size: .78rem; font-weight: 700; }
 .pick-multi.done .pick-check-btn { background: var(--ok); border-color: var(--ok); color: #fff; }
-.pick-qty { position: absolute; left: 10px; bottom: 10px; background: rgba(30,27,24,.82); color: #fff; font-weight: 700; font-size: 1rem; padding: 5px 11px; border-radius: 999px; letter-spacing: .02em; }
+.pick-qty { position: absolute; left: 8px; bottom: 8px; background: rgba(30,27,24,.82); color: #fff; font-weight: 700; font-size: 1rem; padding: 5px 11px; border-radius: 999px; letter-spacing: .02em; }
 .pick-multi .pick-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-weight: 600; color: var(--ink, #222) !important; }
 .pick-subs { border-top: 1px solid var(--line, #e6dfd6); padding: 6px 10px 12px; display: grid; gap: 6px; }
 .pick-sub { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 12px; border: 1.5px solid var(--line, #e6dfd6); border-radius: 10px; background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
 .pick-sub.done { background: var(--ok-soft); border-color: var(--ok); }
 .pick-sub-check { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #cfc5b8; display: grid; place-items: center; }
 .pick-sub.done .pick-sub-check { background: var(--ok); border-color: var(--ok); color: #fff; }
+
+.pick-multi.is-open .pick-photo { aspect-ratio: 16 / 9; }
