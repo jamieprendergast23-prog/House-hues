@@ -40,7 +40,7 @@ export default function Dashboard2() {
   const load = () => Promise.all([
     fetchAll(() => supabase.from('jobs').select('*, clients(name), job_finance(*)').order('created_at')),
     fetchAll(() => supabase.from('v_items').select('id, status, out_job_id, condition, for_sale, sold_at').order('code')),
-    fetchAll(() => supabase.from('job_items').select('id, job_id, packed_at, returned_at, missing_at').order('id')),
+    fetchAll(() => supabase.from('job_items').select('id, job_id, item_id, packed_at, returned_at, missing_at').order('id')),
     supabase.from('reminders').select('*, jobs(id, property_address, status)').is('done_at', null).order('due_date').then((r) => r.data || []),
     supabase.from('shop_orders').select('id, total, status, created_at, buyer_name, items').order('created_at', { ascending: false }).then((r) => r.data || []),
   ]).then(([jobs, items, lines, reminders, orders]) => setD({ jobs, items, lines, orders, reminders: reminders.filter((r) => !r.job_id || (r.jobs && r.jobs.status !== 'cancelled')) }))
@@ -71,7 +71,21 @@ export default function Dashboard2() {
 
     // stock
     const pieces = d.items.filter((i) => i.status !== 'retired')
-    const out = pieces.filter((i) => i.out_job_id).length
+    // a piece counts as out if it was packed, or it sits on a house that is installed
+    // (even when nobody scanned it); booked = held for a house that hasn't gone in yet
+    const colOf = new Map(live.map((j) => [j.id, columnOf(j)]))
+    const outIds = new Set(pieces.filter((i) => i.out_job_id).map((i) => i.id))
+    const bookedIds = new Set()
+    for (const l of d.lines) {
+      if (l.returned_at) continue
+      const c = colOf.get(l.job_id)
+      if (!c) continue
+      if (l.packed_at || c === 'out' || c === 'packup') outIds.add(l.item_id)
+      else bookedIds.add(l.item_id)
+    }
+    const live_ids = new Set(pieces.map((i) => i.id))
+    const out = [...outIds].filter((id) => live_ids.has(id)).length
+    const held = [...bookedIds].filter((id) => live_ids.has(id) && !outIds.has(id)).length
     const repair = pieces.filter((i) => i.status === 'repair' || i.condition === 'needs_repair').length
     const missing = d.lines.filter((l) => l.missing_at && !l.returned_at).length
 
@@ -99,7 +113,7 @@ export default function Dashboard2() {
     return {
       t, events: events.slice(0, 4), todayCount, weekCount,
       cols, next, nextProg, endingSoon,
-      pieces: pieces.length, out, repair, missing, inShed: pieces.length - out - repair,
+      pieces: pieces.length, out, held, repair, missing, inShed: pieces.length - out - repair,
       booked: month.reduce((a, j) => a + price(j), 0), received: month.reduce((a, j) => a + got(j), 0), monthJobs: month.length,
       owing, owedTotal: owing.reduce((a, j) => a + j.owed, 0), last6,
       shopListed, toHand, shopMonth,
@@ -115,6 +129,7 @@ export default function Dashboard2() {
 
   if (!s) return <Loading />
   const util = s.pieces ? Math.round((s.out / s.pieces) * 100) : 0
+  const bookedPct = s.pieces ? (s.held / s.pieces) * 100 : 0
   const max6 = Math.max(...s.last6.map((m) => m.v), 1)
 
   return (
@@ -174,10 +189,12 @@ export default function Dashboard2() {
             <div className="tc-row tc-col tc-hero">
               <b>{s.out} of {s.pieces}</b>
               <span className="tc-sub">pieces out on hire ({util}%)</span>
-              <div className="meter"><span style={{ width: `${util}%` }} /></div>
+              <div className="meter meter-split"><span style={{ width: `${s.pieces ? (s.out / s.pieces) * 100 : 0}%` }} /><span className="m-booked" style={{ width: `${bookedPct}%` }} /></div>
+              {s.held > 0 && <span className="tc-sub tc-held">+ {s.held} booked for upcoming houses</span>}
             </div>
             <div className="tc-row tc-counts">
               <span><b>{s.inShed}</b> in shed</span>
+              <span><b>{s.held}</b> booked</span>
               <span><b>{s.repair}</b> repair</span>
               <span><b>{s.missing}</b> missing</span>
             </div>

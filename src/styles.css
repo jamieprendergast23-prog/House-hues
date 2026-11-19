@@ -1093,3 +1093,8 @@ input, select, textarea { border-radius: 10px; }
 .pick-cards.v-list .pick-card .pick-text { flex: 1; min-width: 0; padding: 0 0 0 12px; }
 .pick-cards.v-list .pick-qty { left: 12px; top: 50px; bottom: auto; font-size: .72rem; padding: 2px 7px; }
 .pick-cards.v-list .pick-subs { flex-basis: 100%; margin: 8px -58px 0 0; padding: 8px 0 0; }
+.meter.meter-split { display: flex; }
+.meter.meter-split span { border-radius: 0; }
+.meter.meter-split span:first-child { border-radius: 99px 0 0 99px; }
+.meter.meter-split .m-booked { background: #cdbfae; background-image: none; }
+.tc-held { margin-top: 2px; color: #8c7a66; font-weight: 600; }
