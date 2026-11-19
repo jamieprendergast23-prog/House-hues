@@ -20,7 +20,6 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
   const [extra, setExtra] = useState([])
   const [busy, setBusy] = useState('')
   const [viewer, setViewer] = useState(null)
-  const [photoTab, setPhotoTab] = useState({}) // room -> 'design' | 'site' | 'after'
   const [newRoom, setNewRoom] = useState(null)
   const [importing, setImporting] = useState(false)
   const [picked, setPicked] = useState(new Set())
@@ -88,41 +87,35 @@ export default function JobRooms({ jobId, lines, onAddFurniture, onRemoveLine, o
   }
 
 
-  const KINDS = [['design', 'Design'], ['site', 'Before'], ['after', 'Styled']]
-  const gallery = (room) => {
-    const count = (k) => photos.filter((p) => p.room === room && p.kind === k).length
-    // open on the first tab that has photos, else Design
-    const tab = photoTab[room] || KINDS.find(([k]) => count(k))?.[0] || 'design'
-    const list = photos.filter((p) => p.room === room && p.kind === tab)
-    const label = KINDS.find(([k]) => k === tab)[1]
-    const key = `${room}-${tab}`
-    return (
-      <div className="gallery">
-        <div className="gal-tabs" role="tablist" aria-label={`${room} photos`}>
-          {KINDS.map(([k, l]) => (
-            <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? 'on' : ''}
-              onClick={() => setPhotoTab({ ...photoTab, [room]: k })}>
-              {l}{count(k) > 0 && <span className="gal-n">{count(k)}</span>}
-            </button>
-          ))}
-        </div>
-        <div className="gal-grid">
-          {list.map((p, i) => (
-            <div key={p.id} className="gal-item">
-              <button type="button" className="gal-img" onClick={() => setViewer({ photos: list.map((x) => ({ url: x.url, label: `${room} · ${label.toLowerCase()}` })), start: i })}>
-                <img src={p.url} alt={`${room} ${label.toLowerCase()} photo ${i + 1}`} loading="lazy" />
-              </button>
-              <button type="button" className="gal-del" onClick={() => removePhoto(p)} aria-label="Remove photo"><Icon name="close" size={12} stroke={2.4} /></button>
+  // Before, then Design, then Styled: each heading with its photos in a grid below
+  const KINDS = [['site', 'Before'], ['design', 'Design'], ['after', 'Styled']]
+  const gallery = (room) => (
+    <div className="gallery">
+      {KINDS.map(([kind, label]) => {
+        const list = photos.filter((p) => p.room === room && p.kind === kind)
+        const key = `${room}-${kind}`
+        return (
+          <div key={kind} className="gal-sec">
+            <div className="gal-head"><span className="eyebrow">{label}</span>{list.length > 0 && <span className="gal-count">{list.length}</span>}</div>
+            <div className="gal-grid">
+              {list.map((p, i) => (
+                <div key={p.id} className="gal-item">
+                  <button type="button" className="gal-img" onClick={() => setViewer({ photos: list.map((x) => ({ url: x.url, label: `${room} · ${label.toLowerCase()}` })), start: i })}>
+                    <img src={p.url} alt={`${room} ${label.toLowerCase()} photo ${i + 1}`} loading="lazy" />
+                  </button>
+                  <button type="button" className="gal-del" onClick={() => removePhoto(p)} aria-label="Remove photo"><Icon name="close" size={12} stroke={2.4} /></button>
+                </div>
+              ))}
+              <label className={`gal-add ${busy === key ? 'busy' : ''}`}>
+                {busy === key ? <span>Uploading…</span> : <><Icon name="plus" size={20} /><span>{kind === 'design' ? 'Add design' : 'Add photo'}</span></>}
+                <input type="file" accept="image/*" multiple hidden onChange={(e) => { const f = [...e.target.files]; e.target.value = ''; upload(room, kind, f) }} />
+              </label>
             </div>
-          ))}
-          <label className={`gal-add ${busy === key ? 'busy' : ''}`}>
-            {busy === key ? <span>Uploading…</span> : <><Icon name="plus" size={20} /><span>{tab === 'design' ? 'Add design' : 'Add photo'}</span></>}
-            <input type="file" accept="image/*" multiple hidden onChange={(e) => { const f = [...e.target.files]; e.target.value = ''; upload(room, tab, f) }} />
-          </label>
-        </div>
-      </div>
-    )
-  }
+          </div>
+        )
+      })}
+    </div>
+  )
 
   return (
     <section className="card">

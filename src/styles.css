@@ -1035,3 +1035,10 @@ input, select, textarea { border-radius: 10px; }
   border: 1.5px dashed #d6cdc1; border-radius: 10px; background: #fbf9f6; color: var(--muted); font-size: .76rem; font-weight: 500; cursor: pointer; }
 .gal-add:hover { color: var(--ink); border-color: #bfb3a4; }
 .gal-add.busy { opacity: .6; }
+/* stacked photo sections */
+.gal-sec { margin-top: 12px; }
+.gal-sec:first-child { margin-top: 6px; }
+.gal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.gal-head .eyebrow { margin: 0; }
+.gal-count { font-size: .7rem; color: var(--muted); background: #f3efe9; border: 1px solid var(--edge); border-radius: 999px; padding: 0 7px; }
+.gal-sec .gal-grid { margin-top: 0; }
